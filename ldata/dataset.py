@@ -24,7 +24,7 @@ class Dataset:
     class Split:
         """A split of the dataset, which contains input and target data."""
 
-        def __init__(self, input: List[str], target: List[Optional[str]]):
+        def __init__(self, input: np.ndarray[str], target: np.ndarray[Optional[str]]):
             """
             Initialize the dataset split.
 
@@ -46,13 +46,13 @@ class Dataset:
             self._target = target
 
         @property
-        def input(self) -> List[str]:
+        def input(self) -> np.ndarray[str]:
             """The input data."""
 
             return self._input
 
         @property
-        def target(self) -> List[Optional[str]]:
+        def target(self) -> np.ndarray[Optional[str]]:
             """The target data."""
 
             return self._target
@@ -114,10 +114,13 @@ class Dataset:
 
         with open(self._data_path, "r") as file:
             lines = file.readlines()[1:]
-            input = [line.split(",")[0].strip() for line in lines]
-            target = [
-                t if t else None for t in [line.split(",")[1].strip() for line in lines]
-            ]
+            input = np.array([line.split(",")[0].strip() for line in lines])
+            target = np.array(
+                [
+                    t if t else None
+                    for t in [line.split(",")[1].strip() for line in lines]
+                ]
+            )
 
         return self.Split(input, target)
 
