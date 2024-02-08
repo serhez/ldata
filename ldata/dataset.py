@@ -2,15 +2,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from os import path
-from typing import Optional, Union
+from typing import Generic, Optional, Type, TypeVar, Union
 
 import numpy as np
+
+_InputDType = TypeVar("_InputDType")
+_TargetDType = TypeVar("_TargetDType")
 
 
 # TODO: Allow the data file path to be in a remote server (e.g., a URL)
 # TODO: Implement chaching the dataset into a file if coming from a remote server
 # TODO: Implement paging to avoid loading the entire dataset into memory
-class Dataset[InputType, TargetType]:
+class Dataset(Generic[_InputDType, _TargetDType]):
     """A dataset which can be split into training and test sets."""
 
     @dataclass(kw_only=True)
@@ -25,7 +28,9 @@ class Dataset[InputType, TargetType]:
         """A split of the dataset, which contains input and target data."""
 
         def __init__(
-            self, input: np.ndarray[InputType], target: np.ndarray[Optional[TargetType]]
+            self,
+            input: np.ndarray[_InputDType],
+            target: np.ndarray[Optional[_TargetDType]],
         ):
             """
             Initialize the dataset split.
@@ -48,13 +53,13 @@ class Dataset[InputType, TargetType]:
             self._target = target
 
         @property
-        def input(self) -> np.ndarray[InputType]:
+        def input(self) -> np.ndarray[_InputDType]:
             """The input data."""
 
             return self._input
 
         @property
-        def target(self) -> np.ndarray[Optional[TargetType]]:
+        def target(self) -> np.ndarray[Optional[_TargetDType]]:
             """The target data."""
 
             return self._target
@@ -84,7 +89,13 @@ class Dataset[InputType, TargetType]:
             idxs = np.random.choice(len(self), n, replace=replace)
             return self[idxs]
 
-    def __init__(self, data_path: str, config: Config):
+    def __init__(
+        self,
+        data_path: str,
+        config: Config,
+        input_dtype: Type[_InputDType] = str,
+        target_dtype: Type[_TargetDType] = str,
+    ):
         """
         Initialize the dataset.
 
@@ -92,6 +103,8 @@ class Dataset[InputType, TargetType]:
         ----------
         `data_path`: the path to the data file.
         `config`: the configuration for the dataset.
+        `input_dtype`: the data type of the input data.
+        `target_dtype`: the data type of the target data.
 
         ### Raises
         ----------
@@ -107,6 +120,8 @@ class Dataset[InputType, TargetType]:
 
         self._data_path = data_path
         self._config = config
+        self._input_dtype = input_dtype
+        self._target_dtype = target_dtype
 
         if self._config.shuffle:
             self._train_idxs = np.random.choice(
@@ -132,10 +147,12 @@ class Dataset[InputType, TargetType]:
 
         with open(self._data_path, "r") as file:
             lines = file.readlines()[1:]
-            input = np.array([InputType(line.split(",")[0].strip()) for line in lines])
+            input = np.array(
+                [self._input_dtype(line.split(",")[0].strip()) for line in lines]
+            )
             target = np.array(
                 [
-                    TargetType(t) if t else None
+                    self._target_dtype(t) if t else None
                     for t in [line.split(",")[1].strip() for line in lines]
                 ]
             )
