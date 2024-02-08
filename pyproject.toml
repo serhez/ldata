@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ldata"
+version = "0.0.1"
+authors = [
+    { name = "Sergio Hernandez Gutierrez", email = "contact.sergiohernandez@gmail.com" },
+]
+description = "A collection of language-based datasets and benchmarks."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = ["mloggers", "numpy", "multipledispatch"]
+
+[project.urls]
+Homepage = "https://github.com/serhez/ldata"
+Issues = "https://github.com/serhez/ldata/issues"
