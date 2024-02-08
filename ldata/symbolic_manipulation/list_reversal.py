@@ -1,6 +1,6 @@
 import numpy as np
 
-from ldata import Benchmark
+from ldata.benchmark import Benchmark
 
 
 class ListReversal(Benchmark):

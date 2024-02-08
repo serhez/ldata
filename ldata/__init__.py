@@ -1,8 +1,7 @@
-from .benchmark import AggregationMethod, Benchmark
+from .benchmark import Benchmark
 from .dataset import Dataset
 
 __all__ = [
-    "AggregationMethod",
     "Benchmark",
     "Dataset",
 ]

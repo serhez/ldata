@@ -5,7 +5,7 @@ from typing import Any, Callable, Iterator, List, Union
 import numpy as np
 from multipledispatch import dispatch
 
-from ldata import Dataset
+from ldata.dataset import Dataset
 
 
 class Benchmark(ABC, Dataset):
