@@ -77,12 +77,13 @@ class Experiment:
 
     __call__: Callable[..., Any] = _call_impl
 
+    # TODO: Add caption including aggregation method used.
     @staticmethod
     def latex_table(
         self,
         results: np.ndarray[float],
         subject_names: List[str],
-        decimal_points: int = 3,
+        decimals: int = 3,
     ) -> str:
         """
         Designs a latex table containing the results of an experiment.
@@ -91,6 +92,7 @@ class Experiment:
         ----------
         `results`: the results of an experiment.
         `subject_names`: the names of the subjects referenced in the table.
+        `decimals`: the number of decimal places with which to display floating point numbers.
 
         ### Returns
         ----------
@@ -105,7 +107,7 @@ class Experiment:
 
         rows = []
         for i, subject_name in enumerate(subject_names):
-            row = f"{subject_name} & {' & '.join([f'{score:.{decimal_points}f}' for score in results[i]])} \\\\"
+            row = f"{subject_name} & {' & '.join([f'{score:.{decimals}f}' for score in results[i]])} \\\\"
             rows.append(row)
 
         return f"{header}\n{'\\hline\n'.join(rows)}\n\\end{{tabular}}"
