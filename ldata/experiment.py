@@ -22,7 +22,16 @@ class Experiment:
         `subjects`: the list of subjects to compare.
         `benchmarks`: the list of benchmarks to use.
         `default_aggregation_method`: the default method to aggregate the scores given by the benchmarks for each the (input, output) pairs.
+        - `AggregationMethod.NONE` is not supported.
+
+        ### Raises
+        `ValueError`: if `AggregationMethod.NONE` is used as the default aggregation method.
         """
+
+        if default_aggregation_method == Benchmark.AggregationMethod.NONE:
+            raise ValueError(
+                "The default aggregation method for an experiment cannot be `AggregationMethod.NONE`."
+            )
 
         self._subjects = subjects
         self._benchmarks = benchmarks
@@ -42,7 +51,16 @@ class Experiment:
         ### Returns
         ----------
         A matrix of scores, where the rows correspond to the subjects and the columns correspond to the benchmarks.
+
+        ### Raises
+        ----------
+        `ValueError`: if `AggregationMethod.NONE` is used as the aggregation method.
         """
+
+        if aggregation_method == Benchmark.AggregationMethod.NONE:
+            raise ValueError(
+                "The aggregation method for an experiment cannot be `AggregationMethod.NONE`."
+            )
 
         if aggregation_method is None:
             aggregation_method = self._default_aggregation_method
