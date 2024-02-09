@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import MISSING, dataclass
 from enum import Enum
 from typing import Any, Callable, List, Union
 
@@ -10,6 +11,11 @@ from ldata.dataset import Dataset
 class Benchmark(ABC, Dataset):
     """Abstract class for a benchmark."""
 
+    @dataclass(kw_only=True)
+    class Config(Dataset.Config):
+        name: str = MISSING
+        """The name of the benchmark used for reporting."""
+
     class AggregationMethod(Enum):
         """The method to aggregate the scores of the (input, output) pairs."""
 
@@ -20,8 +26,15 @@ class Benchmark(ABC, Dataset):
         SUM = "sum"
         NONE = "none"
 
-    def __init__(self, data_path: str, config: Dataset.Config):
+    def __init__(self, data_path: str, config: Config):
         super().__init__(data_path, config)
+
+        self._name = config.name
+
+    @property
+    def name(self) -> str:
+        """The name of the benchmark."""
+        return self._name
 
     def evaluate(
         self,
