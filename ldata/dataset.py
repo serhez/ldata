@@ -29,49 +29,49 @@ class Dataset(Generic[_InputDType, _TargetDType]):
 
         def __init__(
             self,
-            input: np.ndarray[_InputDType],
-            target: np.ndarray[Optional[_TargetDType]],
+            inputs: np.ndarray[_InputDType],
+            targets: np.ndarray[Optional[_TargetDType]],
         ):
             """
             Initialize the dataset split.
 
             ### Parameters
             ----------
-            `input`: the input data.
-            `target`: the target data.
+            `inputs`: the input data.
+            `targets`: the target data.
 
             ### Raises
             ----------
-            `AssertionError`: if the input and target lists have different lengths.
+            `AssertionError`: if the inputs and targets lists have different lengths.
             """
 
-            assert len(input) == len(
-                target
-            ), "Input and target lists must have the same length."
+            assert len(inputs) == len(
+                targets
+            ), "inputs and targets lists must have the same length."
 
-            self._input = input
-            self._target = target
+            self._inputs = inputs
+            self._targets = targets
 
         @property
-        def input(self) -> np.ndarray[_InputDType]:
+        def inputs(self) -> np.ndarray[_InputDType]:
             """The input data."""
 
-            return self._input
+            return self._inputs
 
         @property
-        def target(self) -> np.ndarray[Optional[_TargetDType]]:
+        def targets(self) -> np.ndarray[Optional[_TargetDType]]:
             """The target data."""
 
-            return self._target
+            return self._targets
 
         def __len__(self) -> int:
-            return len(self._input)
+            return len(self._inputs)
 
         def __getitem__(self, idx: Union[int, np.ndarray[int]]) -> Dataset.Split:
-            return Dataset.Split(self._input[idx], self._target[idx])
+            return Dataset.Split(self._inputs[idx], self._targets[idx])
 
         def __iter__(self) -> Dataset.Split:
-            return Dataset.Split(zip(self._input, self._target))
+            return Dataset.Split(zip(self._inputs, self._targets))
 
         def sample(self, n: int = 1, replace: bool = False) -> Dataset.Split:
             """
@@ -147,17 +147,17 @@ class Dataset(Generic[_InputDType, _TargetDType]):
 
         with open(self._data_path, "r") as file:
             lines = file.readlines()[1:]
-            input = np.array(
+            inputs = np.array(
                 [self._input_dtype(line.split(",")[0].strip()) for line in lines]
             )
-            target = np.array(
+            targets = np.array(
                 [
                     self._target_dtype(t) if t else None
                     for t in [line.split(",")[1].strip() for line in lines]
                 ]
             )
 
-        return self.Split(input, target)
+        return self.Split(inputs, targets)
 
     @property
     def train_set(self) -> Split:

@@ -47,7 +47,7 @@ class Benchmark(ABC, Dataset):
         """
         Evaluate the subjects on the benchmark.
         The evaluation metric and the the possible range of score values should be available in the benchmark's documentation.
-        The input and target are taken from the complete test set.
+        The inputs and targets are taken from the complete test set.
 
         ### Parameters
         ----------
@@ -61,15 +61,16 @@ class Benchmark(ABC, Dataset):
         - Otherwise, the return value is a single score, which is the result of the aggregation method.
         """
 
-        input = self.test_set.input
-        target = self.test_set.target
+        inputs = self.test_set.inputs
+        targets = self.test_set.targets
 
-        assert len(input) == len(
-            target
+        assert len(inputs) == len(
+            targets
         ), "the number of inputs and targets must be the same."
 
         scores = [
-            self._evaluate_impl(subject(input[i]), target[i]) for i in range(len(input))
+            self._evaluate_impl(subject(inputs[i]), targets[i])
+            for i in range(len(inputs))
         ]
 
         if aggregation_method == self.AggregationMethod.MEAN:
