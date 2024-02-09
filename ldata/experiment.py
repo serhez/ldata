@@ -110,4 +110,4 @@ class Experiment:
             row = f"{subject_name} & {' & '.join([f'{score:.{decimals}f}' for score in results[i]])} \\\\"
             rows.append(row)
 
-        return f"{header}\n{'\\hline\n'.join(rows)}\n\\end{{tabular}}"
+        return "{}\n{}\n{}".format(header, "\\hline\n".join(rows), "\\end{tabular}")
