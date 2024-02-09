@@ -31,6 +31,9 @@ class Benchmark(ABC, Dataset):
 
         self._name = config.name
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(name={self.name})"
+
     @property
     def name(self) -> str:
         """The name of the benchmark."""
