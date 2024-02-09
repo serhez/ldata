@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional
 
 import numpy as np
 
@@ -71,6 +71,11 @@ class Experiment:
                 results[i, j] = benchmark.evaluate(subject, aggregation_method)
 
         return results
+
+    def _call_impl(self, *args, **kwargs):
+        return self.run(*args, **kwargs)
+
+    __call__: Callable[..., Any] = _call_impl
 
     @staticmethod
     def latex_table(
