@@ -80,9 +80,9 @@ class Experiment:
     # TODO: Add caption including aggregation method used.
     @staticmethod
     def latex_table(
-        self,
         results: np.ndarray[float],
         subject_names: List[str],
+        benchmark_names: List[str],
         decimals: int = 3,
     ) -> str:
         """
@@ -92,6 +92,7 @@ class Experiment:
         ----------
         `results`: the results of an experiment.
         `subject_names`: the names of the subjects referenced in the table.
+        `benchmark_names`: the names of the benchmarks referenced in the table.
         `decimals`: the number of decimal places with which to display floating point numbers.
 
         ### Returns
@@ -99,10 +100,10 @@ class Experiment:
         The latex table.
         """
 
-        header = " & ".join([benchmark.name for benchmark in self._benchmarks])
+        header = " & ".join([benchmark_name for benchmark_name in benchmark_names])
         header = f"Subject & {header} \\\\"
         header = (
-            f"\\begin{{tabular}}{{c|{len(self._benchmarks) * 'c'}}}\n{header}\n\\hline"
+            f"\\begin{{tabular}}{{c|{len(benchmark_names) * 'c'}}}\n{header}\n\\hline"
         )
 
         rows = []
