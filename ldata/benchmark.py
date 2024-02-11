@@ -27,6 +27,15 @@ class Benchmark(ABC, Dataset):
         NONE = "none"
 
     def __init__(self, data_path: str, config: Config):
+        """
+        Initialize a `Benchmark`.
+
+        ### Parameters
+        ----------
+        `data_path`: the path to the data directory.
+        `config`: the configuration of the benchmark.
+        """
+
         super().__init__(data_path, config)
 
         self._name = config.name
