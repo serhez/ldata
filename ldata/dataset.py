@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import MISSING, dataclass
 from os import path
 from typing import Generic, Optional, Type, TypeVar, Union
 
@@ -18,6 +18,11 @@ class Dataset(Generic[_InputDType, _TargetDType]):
 
     @dataclass(kw_only=True)
     class Config:
+        """The configuration of a dataset."""
+
+        name: str = MISSING
+        """The name of the dataset used for reporting."""
+
         test_percentage: float = 0.2
         """Percentage of the dataset to use for testing."""
 

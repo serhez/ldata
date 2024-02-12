@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import numpy as np
 
 from ldata.benchmark import Benchmark
@@ -10,16 +12,24 @@ class ListReversal(Benchmark):
     The range of score values is [0.0, 1.0].
     """
 
-    def __init__(self, data_path: str):
+    @dataclass
+    class Config(Benchmark.Config):
+        """The configuration of the list reversal benchmark."""
+
+        name = "ListReversal"
+        """The name of the benchmark."""
+
+    def __init__(self, data_path: str, config: Config = Config()):
         """
         Initialize the letter concatenation benchmark.
 
         ### Parameters
         ----------
         `data_path`: the path to the data directory.
+        `config`: the configuration of the benchmark.
         """
 
-        super().__init__(data_path, self.Config(name="ListReversal"))
+        super().__init__(data_path, config)
 
     def _evaluate_impl(self, output: str, target: str) -> float:
         output_list = output.split(" ")

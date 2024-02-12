@@ -13,6 +13,8 @@ class Benchmark(ABC, Dataset):
 
     @dataclass(kw_only=True)
     class Config(Dataset.Config):
+        """The configuration of a benchmark."""
+
         name: str = MISSING
         """The name of the benchmark used for reporting."""
 
