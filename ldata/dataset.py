@@ -192,3 +192,12 @@ class Dataset(Generic[_InputDType, _TargetDType]):
         """Length of the dataset."""
 
         return self.train_len + self.test_len
+
+
+try:
+    from hydra.core.config_store import ConfigStore
+
+    cs = ConfigStore.instance()
+    cs.store(name="base_dataset", node=Dataset.Config)
+except ModuleNotFoundError:
+    pass

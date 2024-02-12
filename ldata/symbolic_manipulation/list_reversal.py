@@ -44,3 +44,12 @@ class ListReversal(Benchmark):
             ]
         )
         return tot_score / len(output_list)
+
+
+try:
+    from hydra.core.config_store import ConfigStore
+
+    cs = ConfigStore.instance()
+    cs.store(name="base_list_reversal", node=ListReversal.Config)
+except ModuleNotFoundError:
+    pass

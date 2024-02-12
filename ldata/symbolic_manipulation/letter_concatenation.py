@@ -39,3 +39,12 @@ class LetterConcatenation(Benchmark):
             ]
         )
         return tot_score / len(output)
+
+
+try:
+    from hydra.core.config_store import ConfigStore
+
+    cs = ConfigStore.instance()
+    cs.store(name="base_letter_concatenation", node=LetterConcatenation.Config)
+except ModuleNotFoundError:
+    pass
