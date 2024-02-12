@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import MISSING, dataclass
 from os import path
-from typing import Generic, Optional, Type, TypeVar, Union
+from typing import Generic, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 
@@ -22,6 +22,9 @@ class Dataset(Generic[_InputDType, _TargetDType]):
 
         name: str = MISSING
         """The name of the dataset used for reporting."""
+
+        data_path: str = MISSING
+        """The path to the `CSV` file containing the data."""
 
         test_percentage: float = 0.2
         """Percentage of the dataset to use for testing."""
@@ -72,7 +75,11 @@ class Dataset(Generic[_InputDType, _TargetDType]):
         def __len__(self) -> int:
             return len(self._inputs)
 
-        def __getitem__(self, idx: Union[int, np.ndarray[int]]) -> Dataset.Split:
+        def __getitem__(
+            self, idx: Union[int, np.ndarray[int]]
+        ) -> Union[Tuple[_InputDType, Optional[_TargetDType]], Dataset.Split]:
+            if isinstance(idx, int):
+                return (self._inputs[idx], self._targets[idx])
             return Dataset.Split(self._inputs[idx], self._targets[idx])
 
         def __iter__(self) -> Dataset.Split:
@@ -96,7 +103,6 @@ class Dataset(Generic[_InputDType, _TargetDType]):
 
     def __init__(
         self,
-        data_path: str,
         config: Config,
         input_dtype: Type[_InputDType] = str,
         target_dtype: Type[_TargetDType] = str,
@@ -106,7 +112,6 @@ class Dataset(Generic[_InputDType, _TargetDType]):
 
         ### Parameters
         ----------
-        `data_path`: the path to the data file.
         `config`: the configuration for the dataset.
         `input_dtype`: the data type of the input data.
         `target_dtype`: the data type of the target data.
@@ -117,13 +122,12 @@ class Dataset(Generic[_InputDType, _TargetDType]):
         `ValueError`: if the test percentage is not between 0.0 and 1.0.
         """
 
-        if not path.isfile(data_path):
-            raise FileNotFoundError(f"Data file '{data_path}' does not exist.")
+        if not path.isfile(config.data_path):
+            raise FileNotFoundError(f"Data file '{config.data_path}' does not exist.")
 
         if config.test_percentage < 0 or config.test_percentage > 1:
             raise ValueError("Test percentage must be between 0.0 and 1.0.")
 
-        self._data_path = data_path
         self._config = config
         self._input_dtype = input_dtype
         self._target_dtype = target_dtype
@@ -150,7 +154,7 @@ class Dataset(Generic[_InputDType, _TargetDType]):
     def full_set(self) -> Split:
         """The full dataset."""
 
-        with open(self._data_path, "r") as file:
+        with open(self._config.data_path, "r") as file:
             lines = file.readlines()[1:]
             inputs = np.array(
                 [self._input_dtype(line.split(",")[0].strip()) for line in lines]
@@ -192,6 +196,16 @@ class Dataset(Generic[_InputDType, _TargetDType]):
         """Length of the dataset."""
 
         return self.train_len + self.test_len
+
+    def __getitem__(
+        self, idx: Union[int, np.ndarray[int]]
+    ) -> Union[Tuple[_InputDType, Optional[_TargetDType]], Dataset.Split]:
+        if isinstance(idx, int):
+            return (self.full_set.inputs[idx], self.full_set.targets[idx])
+        return Dataset.Split(self.full_set.inputs[idx], self.full_set.targets[idx])
+
+    def __iter__(self) -> Dataset.Split:
+        return Dataset.Split(zip(self.full_set.inputs, self.full_set.targets))
 
 
 try:

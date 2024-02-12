@@ -12,24 +12,23 @@ class LetterConcatenation(Benchmark):
     The range of score values is [0.0, 1.0].
     """
 
-    @dataclass
+    @dataclass(kw_only=True)
     class Config(Benchmark.Config):
         """The configuration of the letter concatenation benchmark."""
 
-        name = "LetterConcatenation"
+        name: str = "LetterConcatenation"
         """The name of the benchmark."""
 
-    def __init__(self, data_path: str, config: Config = Config()):
+    def __init__(self, config: Config):
         """
         Initialize the letter concatenation benchmark.
 
         ### Parameters
         ----------
-        `data_path`: the path to the data directory.
         `config`: the configuration of the benchmark.
         """
 
-        super().__init__(data_path, config)
+        super().__init__(config)
 
     def _evaluate_impl(self, output: str, target: str) -> float:
         tot_score = np.sum(

@@ -28,17 +28,16 @@ class Benchmark(ABC, Dataset):
         SUM = "sum"
         NONE = "none"
 
-    def __init__(self, data_path: str, config: Config):
+    def __init__(self, config: Config):
         """
         Initialize a `Benchmark`.
 
         ### Parameters
         ----------
-        `data_path`: the path to the data directory.
         `config`: the configuration of the benchmark.
         """
 
-        super().__init__(data_path, config)
+        super().__init__(config)
 
         self._name = config.name
 
