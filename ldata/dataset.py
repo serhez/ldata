@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from dataclasses import MISSING, dataclass
 from os import path
-from typing import Generic, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Generic, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
+from torch import Dataset as TorchDataset
 
 _InputDType = TypeVar("_InputDType")
 _TargetDType = TypeVar("_TargetDType")
@@ -13,7 +14,7 @@ _TargetDType = TypeVar("_TargetDType")
 # TODO: Allow the data file path to be in a remote server (e.g., a URL)
 # TODO: Implement chaching the dataset into a file if coming from a remote server
 # TODO: Implement paging to avoid loading the entire dataset into memory
-class Dataset(Generic[_InputDType, _TargetDType]):
+class Dataset(Generic[_InputDType, _TargetDType], TorchDataset):
     """A dataset which can be split into training and test sets."""
 
     @dataclass(kw_only=True)
@@ -106,6 +107,8 @@ class Dataset(Generic[_InputDType, _TargetDType]):
         config: Config,
         input_dtype: Type[_InputDType] = str,
         target_dtype: Type[_TargetDType] = str,
+        transform: Any = None,
+        target_transform: Any = None,
     ):
         """
         Initialize the dataset.
@@ -115,6 +118,8 @@ class Dataset(Generic[_InputDType, _TargetDType]):
         `config`: the configuration for the dataset.
         `input_dtype`: the data type of the input data.
         `target_dtype`: the data type of the target data.
+        `transform`: the PyTorch transform to apply to the input data.
+        `target_transform`: the PyTorch transform to apply to the target data.
 
         ### Raises
         ----------
@@ -131,6 +136,8 @@ class Dataset(Generic[_InputDType, _TargetDType]):
         self._config = config
         self._input_dtype = input_dtype
         self._target_dtype = target_dtype
+        self._transform = transform
+        self._target_transform = target_transform
 
         if self._config.shuffle:
             self._train_idxs = np.random.choice(
@@ -149,6 +156,18 @@ class Dataset(Generic[_InputDType, _TargetDType]):
                 int(len(self.full_set) * (1 - self._config.test_percentage)),
                 len(self.full_set),
             )
+
+    @property
+    def transform(self) -> Any:
+        """The transform to apply to the input data."""
+
+        return self._transform
+
+    @property
+    def target_transform(self) -> Any:
+        """The transform to apply to the target data."""
+
+        return self._target_transform
 
     @property
     def full_set(self) -> Split:

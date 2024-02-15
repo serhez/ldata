@@ -16,7 +16,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = ["mloggers", "numpy"]
+dependencies = ["mloggers", "numpy", "torch"]
 
 [project.urls]
 Homepage = "https://github.com/serhez/ldata"
