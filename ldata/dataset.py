@@ -5,7 +5,7 @@ from os import path
 from typing import Any, Generic, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
-from torch import Dataset as TorchDataset
+from torch.utils.data import Dataset as TorchDataset
 
 _InputDType = TypeVar("_InputDType")
 _TargetDType = TypeVar("_TargetDType")
