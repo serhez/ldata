@@ -14,7 +14,8 @@ _TargetDType = TypeVar("_TargetDType")
 # TODO: Allow the data file path to be in a remote server (e.g., a URL)
 # TODO: Implement chaching the dataset into a file if coming from a remote server
 # TODO: Implement paging to avoid loading the entire dataset into memory
-class Dataset(Generic[_InputDType, _TargetDType], TorchDataset):
+# FIX: The `Split` class should be a subclass of `TorchDataset` to be able to use PyTorch's `DataLoader` class
+class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
     """A dataset which can be split into training and test sets."""
 
     @dataclass(kw_only=True)
