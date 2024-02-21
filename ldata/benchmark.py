@@ -85,6 +85,7 @@ class Benchmark(ABC, Dataset):
         self,
         subject: Callable[[str], str],
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+        instructed: bool = True,
     ) -> Union[float, List[float]]:
         """
         Evaluate the subjects on the benchmark.
@@ -95,6 +96,7 @@ class Benchmark(ABC, Dataset):
         ----------
         `subject`: the subject to evaluate, which must be a function that takes a single input string and returns a single output string.
         `aggregation_method`: the method to aggregate the scores of the (input, output) pairs.
+        `instructed`: whether to use the instructed test set (as given by `get_instructed`) or the regular test set.
 
         ### Returns
         ----------
@@ -103,8 +105,13 @@ class Benchmark(ABC, Dataset):
         - Otherwise, the return value is a single score, which is the result of the aggregation method.
         """
 
-        inputs = self.test_set.inputs
-        targets = self.test_set.targets
+        if instructed:
+            test_set = self.get_instructed()
+        else:
+            test_set = self.test_set
+
+        inputs = test_set.inputs
+        targets = test_set.targets
 
         assert len(inputs) == len(
             targets
