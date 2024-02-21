@@ -34,6 +34,9 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
         shuffle: bool = False
         """Whether to shuffle the dataset before splitting it into training and testing sets."""
 
+        chache: bool = False
+        """Cache the full dataset into RAM for faster access at the cost of memory."""
+
     class Split:
         """A split of the dataset, which contains input and target data."""
 
@@ -158,6 +161,9 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
                 len(self.full_set),
             )
 
+        if self._config.chache:
+            self._full_set = self.full_set
+
     @property
     def transform(self) -> Any:
         """The transform to apply to the input data."""
@@ -173,6 +179,10 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
     @property
     def full_set(self) -> Split:
         """The full dataset."""
+
+        # The full dataset is cached
+        if hasattr(self, "_full_set"):
+            return self._full_set
 
         with open(self._config.data_path, "r") as file:
             lines = file.readlines()[1:]
