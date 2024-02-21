@@ -1,8 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import MISSING, dataclass
+from typing import Optional, Union
 
 import numpy as np
 
 from ldata.benchmark import Benchmark
+from ldata.dataset import Dataset
 
 
 class LetterConcatenation(Benchmark):
@@ -19,6 +21,9 @@ class LetterConcatenation(Benchmark):
         name: str = "LetterConcatenation"
         """The name of the benchmark."""
 
+        i: int = MISSING
+        """The character's index of the words to concatenate."""
+
     def __init__(self, config: Config):
         """
         Initialize the letter concatenation benchmark.
@@ -29,6 +34,27 @@ class LetterConcatenation(Benchmark):
         """
 
         super().__init__(config)
+
+    def get_instructed(
+        self, sample: Optional[Union[str, Dataset.Split]] = None
+    ) -> Union[str, Dataset.Split]:
+        super().get_instructed(sample)
+
+        if sample is None:
+            sample = self.test_set
+
+        instructions = "The task is to output the word resulting from the concatenation of the character with index {} of each word, where the words are [{}]."
+
+        if isinstance(sample, str):
+            return instructions.format(self._config.i, ", ".join(sample.split(" ")))
+
+        inputs = np.array(
+            [
+                instructions.format(self._config.i, ", ".join(s.split(" ")))
+                for s in sample.inputs
+            ]
+        )
+        return Dataset.Split(inputs, sample.targets)
 
     def _evaluate_impl(self, output: str, target: str) -> float:
         tot_score = np.sum(

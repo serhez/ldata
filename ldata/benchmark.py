@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import MISSING, dataclass
 from enum import Enum
-from typing import Any, Callable, List, Union
+from typing import Any, Callable, List, Optional, Union
 
 import numpy as np
 
@@ -48,6 +48,38 @@ class Benchmark(ABC, Dataset):
     def name(self) -> str:
         """The name of the benchmark."""
         return self._name
+
+    # TODO: Add possibility to include few-shot examples
+    @abstractmethod
+    def get_instructed(
+        self, sample: Optional[Union[str, Dataset.Split]] = None
+    ) -> Union[str, Dataset.Split]:
+        """
+        Add instructions relevant to solve the task to the sample.
+
+        ### Parameters
+        ----------
+        [optional] `sample`: the sample to add instructions to.
+        - If `None`, the test set is used.
+
+        ### Returns
+        ----------
+        The sample with instructions.
+        - If `sample` is a `Dataset.Split`, the instructions are added to the inputs only.
+
+        ### Raises
+        ----------
+        `ValueError`: if `sample` is neither a `Dataset.Split` nor a string.
+        """
+
+        if (
+            sample is not None
+            and not isinstance(sample, Dataset.Split)
+            and not isinstance(sample, str)
+        ):
+            raise ValueError(
+                f"`sample` must be either `None`, a `Dataset.Split` or a string, not {type(sample)}."
+            )
 
     def evaluate(
         self,

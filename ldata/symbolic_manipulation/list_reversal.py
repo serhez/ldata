@@ -1,8 +1,10 @@
 from dataclasses import dataclass
+from typing import Optional, Union
 
 import numpy as np
 
 from ldata.benchmark import Benchmark
+from ldata.dataset import Dataset
 
 
 class ListReversal(Benchmark):
@@ -29,6 +31,24 @@ class ListReversal(Benchmark):
         """
 
         super().__init__(config)
+
+    def get_instructed(
+        self, sample: Optional[Union[str, Dataset.Split]] = None
+    ) -> Union[str, Dataset.Split]:
+        super().get_instructed(sample)
+
+        if sample is None:
+            sample = self.test_set
+
+        instructions = "The task is to reverse the order of the items in a list and output the resulting reversed list. The list is [{}]."
+
+        if isinstance(sample, str):
+            return instructions.format(", ".join(sample.split(" ")))
+
+        inputs = np.array(
+            [instructions.format(", ".join(s.split(" "))) for s in sample.inputs]
+        )
+        return Dataset.Split(inputs, sample.targets)
 
     def _evaluate_impl(self, output: str, target: str) -> float:
         output_list = output.split(" ")
