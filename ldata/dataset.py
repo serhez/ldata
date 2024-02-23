@@ -31,6 +31,12 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
         test_percentage: float = 0.2
         """Percentage of the dataset to use for testing."""
 
+        n_shots: int = 0
+        """
+        The number of samples available at `Dataset.shots` for in-context learning purposes.
+        The training set size will be reduced by `n` in order to create a shots set of size `n`.
+        """
+
         shuffle: bool = False
         """Whether to shuffle the dataset before splitting it into training and testing sets."""
 
@@ -149,6 +155,10 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
                 int(len(self.full_set) * (1 - self._config.test_percentage)),
                 replace=False,
             )
+            self._shots_idxs = np.random.choice(
+                self._train_idxs, self._config.n_shots, replace=False
+            )
+            self._train_idxs = np.setdiff1d(self._train_idxs, self._shots_idxs)
             self._test_idxs = np.setdiff1d(
                 np.arange(len(self.full_set)), self._train_idxs
             )
@@ -156,6 +166,8 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
             self._train_idxs = np.arange(
                 int(len(self.full_set) * (1 - self._config.test_percentage))
             )
+            self._shots_idxs = self._train_idxs[: self._config.n_shots]
+            self._train_idxs = self._train_idxs[self._config.n_shots :]
             self._test_idxs = np.arange(
                 int(len(self.full_set) * (1 - self._config.test_percentage)),
                 len(self.full_set),
@@ -211,6 +223,12 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
         return self.full_set[self._test_idxs]
 
     @property
+    def shots(self) -> Split:
+        """The shots used for in-context learning."""
+
+        return self.full_set[self._shots_idxs]
+
+    @property
     def train_len(self) -> int:
         """Length of the training set."""
 
@@ -221,6 +239,12 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
         """Length of the test set."""
 
         return len(self._test_idxs)
+
+    @property
+    def shots_len(self) -> int:
+        """Length of the shots set."""
+
+        return len(self._shots_idxs)
 
     def __len__(self) -> int:
         """Length of the dataset."""
