@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import MISSING, dataclass
 from enum import Enum
-from typing import Any, Callable, List, Optional, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -82,14 +82,15 @@ class Benchmark(ABC, Dataset):
 
     def evaluate(
         self,
-        subject: Callable[[str], str],
+        subject: Callable[[str, List[Tuple[str, str]]], str],
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
         instructed: bool = True,
     ) -> Union[float, List[float]]:
         """
         Evaluate the subjects on the benchmark.
         The evaluation metric and the the possible range of score values should be available in the benchmark's documentation.
-        The inputs and targets are taken from the complete test set.
+        The inputs and targets are taken from the whole test set.
+        Examples (i.e., shots) will be provided to the subjects to allow for in-context learning; the number of shots is determined by `Benchmark.Config.n_shots`.
 
         ### Parameters
         ----------
@@ -117,7 +118,7 @@ class Benchmark(ABC, Dataset):
         ), "the number of inputs and targets must be the same."
 
         scores = [
-            self._evaluate_impl(subject(inputs[i]), targets[i])
+            self._evaluate_impl(subject(inputs[i], self.shots), targets[i])
             for i in range(len(inputs))
         ]
 
