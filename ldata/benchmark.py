@@ -49,7 +49,6 @@ class Benchmark(ABC, Dataset):
         """The name of the benchmark."""
         return self._name
 
-    # TODO: Add possibility to include few-shot examples
     @abstractmethod
     def get_instructed(
         self, sample: Optional[Union[str, Dataset.Split]] = None
@@ -160,4 +159,4 @@ class Benchmark(ABC, Dataset):
         The score of the output.
         """
 
-        pass
+        raise NotImplementedError
