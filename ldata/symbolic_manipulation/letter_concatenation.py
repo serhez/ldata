@@ -45,7 +45,7 @@ class LetterConcatenation(Benchmark):
         if sample is None:
             sample = self.test_set
 
-        instructions = "The task is to output the word resulting from the concatenation of the character with index {} of each word, where the words are [{}]."
+        instructions = "The task is to concatenate the character with index {} of each input word, where the input words are [{}]. The output must be a single word."
 
         if isinstance(sample, str):
             return instructions.format(self._config.i, ", ".join(sample.split(" ")))

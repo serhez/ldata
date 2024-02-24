@@ -42,7 +42,7 @@ class ListReversal(Benchmark):
         if sample is None:
             sample = self.test_set
 
-        instructions = "The task is to reverse the order of the items in a list and output the resulting reversed list. The list is [{}]."
+        instructions = "The task is to reverse the order of the items in a list. The list is [{}]. The output must be the reversed list."
 
         if isinstance(sample, str):
             return instructions.format(", ".join(sample.split(" ")))
