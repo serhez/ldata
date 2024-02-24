@@ -58,7 +58,16 @@ class LetterConcatenation(Benchmark):
         )
         return Dataset.Split(inputs, sample.targets)
 
-    def _evaluate_impl(self, output: str, target: str) -> float:
+    def _evaluate_impl(
+        self, output: str, target: str, evaluation_method: Benchmark.EvaluationMethod
+    ) -> float:
+        if (
+            evaluation_method == Benchmark.EvaluationMethod.EXACT
+            or evaluation_method == Benchmark.EvaluationMethod.WORD
+        ):
+            return float(output == target)
+
+        # EvaluationMethod.CHARACTER
         tot_score = np.sum(
             [
                 0.0 if i >= len(target) else float(output[i] == target[i])

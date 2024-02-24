@@ -52,7 +52,28 @@ class ListReversal(Benchmark):
         )
         return Dataset.Split(inputs, sample.targets)
 
-    def _evaluate_impl(self, output: str, target: str) -> float:
+    def _evaluate_impl(
+        self, output: str, target: str, evaluation_method: Benchmark.EvaluationMethod
+    ) -> float:
+        if evaluation_method == Benchmark.EvaluationMethod.EXACT:
+            return float(output == target)
+        elif evaluation_method == Benchmark.EvaluationMethod.WORD:
+
+            def eval_item(output: str, target: str) -> float:
+                return float(output == target)
+
+        elif evaluation_method == Benchmark.EvaluationMethod.CHARACTER:
+
+            def eval_item(output: str, target: str) -> float:
+                return np.mean(
+                    [float(output[i] == target[i]) for i in range(len(output))]
+                )
+
+        else:
+            raise NotImplementedError(
+                f"Evaluation method {evaluation_method} is not implemented for this dataset."
+            )
+
         output_list = output.split(" ")
         target_list = target.split(" ")
 
@@ -60,7 +81,7 @@ class ListReversal(Benchmark):
             [
                 0.0
                 if i >= len(target_list)
-                else float(output_list[i] == target_list[i])
+                else eval_item(output_list[i], target_list[i])
                 for i in range(len(output_list))
             ]
         )

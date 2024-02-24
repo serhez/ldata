@@ -28,6 +28,13 @@ class Benchmark(ABC, Dataset):
         SUM = "sum"
         NONE = "none"
 
+    class EvaluationMethod(Enum):
+        """The level of exactness measured by the evaluation metric."""
+
+        EXACT = "exact"
+        WORD = "word"
+        CHARACTER = "character"
+
     def __init__(self, config: Config):
         """
         Initialize a `Benchmark`.
@@ -80,10 +87,10 @@ class Benchmark(ABC, Dataset):
                 f"`sample` must be either `None`, a `Dataset.Split` or a string, not {type(sample)}."
             )
 
-    # TODO: Add `evaluation_level`
     def evaluate(
         self,
         subject: Callable[[str, List[Tuple[str, str]]], str],
+        evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
         instructed: bool = True,
     ) -> Union[float, List[float]]:
@@ -97,6 +104,7 @@ class Benchmark(ABC, Dataset):
         ### Parameters
         ----------
         `subject`: the subject to evaluate, which must be a function that takes a single input string and returns a single output string.
+        `evaluation_method`: the level of exactness measured by the evaluation metric.
         `aggregation_method`: the method to aggregate the scores of the (input, output) pairs.
         `instructed`: whether to use the instructed test set (as given by `get_instructed`) or the regular test set; also applied to the shots.
 
@@ -123,7 +131,9 @@ class Benchmark(ABC, Dataset):
 
         scores = [
             self._evaluate_impl(
-                self.extract_solution(subject(inputs[i], shots)), targets[i]
+                self.extract_solution(subject(inputs[i], shots)),
+                targets[i],
+                evaluation_method,
             )
             for i in range(len(inputs))
         ]
@@ -151,7 +161,9 @@ class Benchmark(ABC, Dataset):
     __call__: Callable[..., Any] = _call_impl
 
     @abstractmethod
-    def _evaluate_impl(self, output: str, target: str) -> float:
+    def _evaluate_impl(
+        self, output: str, target: str, evaluation_method: EvaluationMethod
+    ) -> float:
         """
         The benchmark's internal implementation of `evaluate` acting on a single (input, output) pair; do not call this method directly.
         It is recommended for the scores to be in the range of [0.0, 1.0] and to increase linearly with the quality of the results.
@@ -160,6 +172,7 @@ class Benchmark(ABC, Dataset):
         ----------
         `output`: the output of the subject.
         `target`: the target output.
+        `evaluation_method`: the level of exactness measured by the evaluation metric.
 
         ### Returns
         -------
