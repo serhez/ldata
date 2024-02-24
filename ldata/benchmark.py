@@ -96,7 +96,7 @@ class Benchmark(ABC, Dataset):
         ----------
         `subject`: the subject to evaluate, which must be a function that takes a single input string and returns a single output string.
         `aggregation_method`: the method to aggregate the scores of the (input, output) pairs.
-        `instructed`: whether to use the instructed test set (as given by `get_instructed`) or the regular test set.
+        `instructed`: whether to use the instructed test set (as given by `get_instructed`) or the regular test set; also applied to the shots.
 
         ### Returns
         ----------
@@ -107,8 +107,10 @@ class Benchmark(ABC, Dataset):
 
         if instructed:
             test_set = self.get_instructed()
+            shots = self.get_instructed(self.shots)
         else:
             test_set = self.test_set
+            shots = self.shots
 
         inputs = test_set.inputs
         targets = test_set.targets
@@ -118,7 +120,7 @@ class Benchmark(ABC, Dataset):
         ), "the number of inputs and targets must be the same."
 
         scores = [
-            self._evaluate_impl(subject(inputs[i], self.shots), targets[i])
+            self._evaluate_impl(subject(inputs[i], shots), targets[i])
             for i in range(len(inputs))
         ]
 
