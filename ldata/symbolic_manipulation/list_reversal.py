@@ -98,10 +98,7 @@ class ListReversal(Benchmark):
             else:
                 current_match = words[i:end]
 
-            current_score = np.sum(
-                [1 for i in range(len(words)) if current_match[i] == target_list[i]]
-            )
-
+            current_score = self._evaluate_impl(" ".join(current_match), target)
             if current_score > best_score:
                 best_match = current_match
                 best_score = current_score
