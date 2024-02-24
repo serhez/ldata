@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import MISSING, dataclass
 from os import path
-from typing import Any, Generic, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Generic, Iterable, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 from torch.utils.data import Dataset as TorchDataset
@@ -93,8 +93,8 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
                 return (self._inputs[idx], self._targets[idx])
             return Dataset.Split(self._inputs[idx], self._targets[idx])
 
-        def __iter__(self) -> Dataset.Split:
-            return Dataset.Split(zip(self._inputs, self._targets))
+        def __iter__(self) -> Iterable[Tuple[_InputDType, Optional[_TargetDType]]]:
+            return zip(self._inputs, self._targets)
 
         def sample(self, n: int = 1, replace: bool = False) -> Dataset.Split:
             """
