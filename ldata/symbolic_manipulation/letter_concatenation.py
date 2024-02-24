@@ -1,3 +1,4 @@
+import re
 from dataclasses import MISSING, dataclass
 from typing import Optional, Union
 
@@ -34,6 +35,7 @@ class LetterConcatenation(Benchmark):
         """
 
         super().__init__(config)
+        self._alphanum_pattern = re.compile("[\W_]+")
 
     def get_instructed(
         self, sample: Optional[Union[str, Dataset.Split]] = None
@@ -64,6 +66,52 @@ class LetterConcatenation(Benchmark):
             ]
         )
         return tot_score / len(output)
+
+    def _extract_solution_impl(self, output: str, target: str) -> str:
+        """
+        Extracts the attempted solution from the output and formats it into the `target` format.
+        If no approprate solution is found, an empty string is returned.
+
+        ### Parameters
+        ----------
+        `output`: the output of the model, split by spaces.
+        `target`: the target output, split by spaces.
+
+        ### Returns
+        ----------
+        The extracted and formatted solution.
+        """
+
+        # Step 1: clean the output and split it into words
+        words = [self._alphanum_pattern.sub("", w) for w in output.split(" ")]
+        words = [w for w in words if w != ""]
+
+        # Step 2: find the word that best match the target, either as a whole or as a concatenation of characters
+        concat_letters = ""
+        best_match = ""
+        best_score = 0
+        for w in words:
+            if len(w) == 1:
+                # Add the letter to the concatenation
+                concat_letters += w
+            else:
+                # Score the word
+                current_score = self._evaluate_impl(w, target)
+                if current_score > best_score:
+                    best_match = w
+                    best_score = current_score
+
+                # Reset the concatenated contiguous letters
+                concat_letters = ""
+                continue
+
+            # Score the concatenated contiguous letters
+            current_score = self._evaluate_impl(concat_letters, target)
+            if current_score > best_score:
+                best_match = concat_letters
+                best_score = current_score
+
+        return best_match
 
 
 try:

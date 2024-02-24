@@ -80,6 +80,7 @@ class Benchmark(ABC, Dataset):
                 f"`sample` must be either `None`, a `Dataset.Split` or a string, not {type(sample)}."
             )
 
+    # TODO: Add `evaluation_level`
     def evaluate(
         self,
         subject: Callable[[str, List[Tuple[str, str]]], str],
@@ -91,6 +92,7 @@ class Benchmark(ABC, Dataset):
         The evaluation metric and the the possible range of score values should be available in the benchmark's documentation.
         The inputs and targets are taken from the whole test set.
         Examples (i.e., shots) will be provided to the subjects to allow for in-context learning; the number of shots is determined by `Benchmark.Config.n_shots`.
+        `extract_solution` is used internally to extract the solution from the output and format it into the `target` format, hence you don't need to perform this step before calling this function.
 
         ### Parameters
         ----------
@@ -120,7 +122,9 @@ class Benchmark(ABC, Dataset):
         ), "the number of inputs and targets must be the same."
 
         scores = [
-            self._evaluate_impl(subject(inputs[i], shots), targets[i])
+            self._evaluate_impl(
+                self.extract_solution(subject(inputs[i], shots)), targets[i]
+            )
             for i in range(len(inputs))
         ]
 
@@ -149,7 +153,7 @@ class Benchmark(ABC, Dataset):
     @abstractmethod
     def _evaluate_impl(self, output: str, target: str) -> float:
         """
-        The benchmark's internal implementation of `evaluate` acting on a single (input, output) pair.
+        The benchmark's internal implementation of `evaluate` acting on a single (input, output) pair; do not call this method directly.
         It is recommended for the scores to be in the range of [0.0, 1.0] and to increase linearly with the quality of the results.
 
         ### Parameters
@@ -160,6 +164,54 @@ class Benchmark(ABC, Dataset):
         ### Returns
         -------
         The score of the output.
+        """
+
+        raise NotImplementedError
+
+    def extract_solution(
+        self, outputs: Union[str, List[str]], targets: Union[str, List[str]]
+    ) -> Union[str, List[str]]:
+        """
+        Extracts the attempted solution from the output and formats it into the `target` format.
+        If no approprate solution is found, an empty string is returned.
+
+        ### Parameters
+        ----------
+        `outputs`: the output of the model, split by spaces.
+        `targets`: the target output, split by spaces.
+
+        ### Returns
+        ----------
+        The extracted and formatted solution.
+        - If `output` is a list of strings, the return value is a list of strings.
+
+        ### Raises
+        ----------
+        `ValueError`: if `outputs` and `targets` are not of the same type (either both lists or strings).
+        """
+
+        if isinstance(outputs, list) and isinstance(targets, list):
+            return [self._extract_solution_impl(o, t) for o, t in zip(outputs, targets)]
+        elif isinstance(outputs, str) and isinstance(targets, str):
+            return self._extract_solution_impl(outputs, targets)
+        else:
+            raise ValueError(
+                f"`outputs` and `targets` must be either both lists of strings or both strings, not {type(outputs)} and {type(targets)}."
+            )
+
+    @abstractmethod
+    def _extract_solution_impl(self, output: str, target: str) -> str:
+        """
+        The benchmark's internal implementation of `extract_solution`.
+
+        ### Parameters
+        ----------
+        `output`: the output of the model, split by spaces.
+        `target`: the target output, split by spaces.
+
+        ### Returns
+        ----------
+        The extracted and formatted solution.
         """
 
         raise NotImplementedError

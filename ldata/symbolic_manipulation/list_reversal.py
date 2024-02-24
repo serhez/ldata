@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from typing import Optional, Union
 
@@ -31,6 +32,7 @@ class ListReversal(Benchmark):
         """
 
         super().__init__(config)
+        self._alphanum_pattern = re.compile("[\W_]+")
 
     def get_instructed(
         self, sample: Optional[Union[str, Dataset.Split]] = None
@@ -63,6 +65,48 @@ class ListReversal(Benchmark):
             ]
         )
         return tot_score / len(output_list)
+
+    def _extract_solution_impl(self, output: str, target: str) -> str:
+        """
+        Extracts the attempted solution from the output and formats it into the `target` format.
+        If no approprate solution is found, an empty string is returned.
+
+        ### Parameters
+        ----------
+        `output`: the output of the model, split by spaces.
+        `target`: the target output, split by spaces.
+
+        ### Returns
+        ----------
+        The extracted and formatted solution.
+        """
+
+        target_list = target.split(" ")
+
+        # Step 1: clean the output and split it into words
+        words = [self._alphanum_pattern.sub("", w) for w in output.split(" ")]
+        words = [w for w in words if w != ""]
+
+        # Step 2: find the longest sequence of words that are in the target list
+        current_match = []
+        best_match = []
+        best_score = 0
+        for i in range(len(words)):
+            end = i + len(target_list)
+            if end >= len(words):
+                current_match = words[i:]
+            else:
+                current_match = words[i:end]
+
+            current_score = np.sum(
+                [1 for i in range(len(words)) if current_match[i] == target_list[i]]
+            )
+
+            if current_score > best_score:
+                best_match = current_match
+                best_score = current_score
+
+        return best_match.join(" ")
 
 
 try:
