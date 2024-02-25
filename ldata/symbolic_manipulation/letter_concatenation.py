@@ -59,7 +59,10 @@ class LetterConcatenation(Benchmark):
         return Dataset.Split(inputs, sample.targets)
 
     def _evaluate_impl(
-        self, output: str, target: str, evaluation_method: Benchmark.EvaluationMethod
+        self,
+        output: str,
+        target: str,
+        evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
     ) -> float:
         if (
             evaluation_method == Benchmark.EvaluationMethod.EXACT
@@ -76,7 +79,12 @@ class LetterConcatenation(Benchmark):
         )
         return tot_score / len(output)
 
-    def _extract_solution_impl(self, output: str, target: str) -> str:
+    def _extract_solution_impl(
+        self,
+        output: str,
+        target: str,
+        evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
+    ) -> str:
         # Step 1: clean the output and split it into words
         words = [self._alphanum_pattern.sub("", w) for w in output.split(" ")]
         words = [w for w in words if w != ""]
@@ -91,7 +99,7 @@ class LetterConcatenation(Benchmark):
                 concat_letters += w
             else:
                 # Score the word
-                current_score = self._evaluate_impl(w, target)
+                current_score = self._evaluate_impl(w, target, evaluation_method)
                 if current_score > best_score:
                     best_match = w
                     best_score = current_score
@@ -101,7 +109,9 @@ class LetterConcatenation(Benchmark):
                 continue
 
             # Score the concatenated contiguous letters
-            current_score = self._evaluate_impl(concat_letters, target)
+            current_score = self._evaluate_impl(
+                concat_letters, target, evaluation_method
+            )
             if current_score > best_score:
                 best_match = concat_letters
                 best_score = current_score

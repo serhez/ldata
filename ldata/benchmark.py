@@ -182,7 +182,10 @@ class Benchmark(ABC, Dataset):
         raise NotImplementedError
 
     def extract_solution(
-        self, outputs: Union[str, List[str]], targets: Union[str, List[str]]
+        self,
+        outputs: Union[str, List[str]],
+        targets: Union[str, List[str]],
+        evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
     ) -> Union[str, List[str]]:
         """
         Extracts the attempted solution from the output and formats it into the `target` format.
@@ -192,6 +195,7 @@ class Benchmark(ABC, Dataset):
         ----------
         `outputs`: the output of the model, split by spaces.
         `targets`: the target output, split by spaces.
+        `evaluation_method`: the level of exactness measured by the evaluation metric.
 
         ### Returns
         ----------
@@ -204,16 +208,24 @@ class Benchmark(ABC, Dataset):
         """
 
         if isinstance(outputs, list) and isinstance(targets, list):
-            return [self._extract_solution_impl(o, t) for o, t in zip(outputs, targets)]
+            return [
+                self._extract_solution_impl(o, t, evaluation_method)
+                for o, t in zip(outputs, targets)
+            ]
         elif isinstance(outputs, str) and isinstance(targets, str):
-            return self._extract_solution_impl(outputs, targets)
+            return self._extract_solution_impl(outputs, targets, evaluation_method)
         else:
             raise ValueError(
                 f"`outputs` and `targets` must be either both lists of strings or both strings, not {type(outputs)} and {type(targets)}."
             )
 
     @abstractmethod
-    def _extract_solution_impl(self, output: str, target: str) -> str:
+    def _extract_solution_impl(
+        self,
+        output: str,
+        target: str,
+        evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
+    ) -> str:
         """
         The benchmark's internal implementation of `extract_solution`.
 
@@ -221,6 +233,7 @@ class Benchmark(ABC, Dataset):
         ----------
         `output`: the output of the model, split by spaces.
         `target`: the target output, split by spaces.
+        `evaluation_method`: the level of exactness measured by the evaluation metric.
 
         ### Returns
         ----------

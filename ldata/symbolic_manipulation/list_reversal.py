@@ -52,24 +52,24 @@ class ListReversal(Benchmark):
         )
         return Dataset.Split(inputs, sample.targets)
 
+    def _eval_word(self, output: str, target: str) -> float:
+        return float(output == target)
+
+    def _eval_char(self, output: str, target: str) -> float:
+        return np.mean([float(output[i] == target[i]) for i in range(len(output))])
+
     def _evaluate_impl(
-        self, output: str, target: str, evaluation_method: Benchmark.EvaluationMethod
+        self,
+        output: str,
+        target: str,
+        evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
     ) -> float:
         if evaluation_method == Benchmark.EvaluationMethod.EXACT:
             return float(output == target)
-
         elif evaluation_method == Benchmark.EvaluationMethod.WORD:
-
-            def eval_item(output: str, target: str) -> float:
-                return float(output == target)
-
+            eval_fn = self._eval_word
         elif evaluation_method == Benchmark.EvaluationMethod.CHARACTER:
-
-            def eval_item(output: str, target: str) -> float:
-                return np.mean(
-                    [float(output[i] == target[i]) for i in range(len(output))]
-                )
-
+            eval_fn = self._eval_char
         else:
             raise NotImplementedError(
                 f"Evaluation method {evaluation_method} is not implemented for this dataset."
@@ -82,13 +82,18 @@ class ListReversal(Benchmark):
             [
                 0.0
                 if i >= len(target_list)
-                else eval_item(output_list[i], target_list[i])
+                else eval_fn(output_list[i], target_list[i])
                 for i in range(len(output_list))
             ]
         )
         return tot_score / len(output_list)
 
-    def _extract_solution_impl(self, output: str, target: str) -> str:
+    def _extract_solution_impl(
+        self,
+        output: str,
+        target: str,
+        evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
+    ) -> str:
         target_list = target.split(" ")
 
         # Step 1: clean the output and split it into words
@@ -106,7 +111,9 @@ class ListReversal(Benchmark):
             else:
                 current_match = words[i:end]
 
-            current_score = self._evaluate_impl(" ".join(current_match), target)
+            current_score = self._evaluate_impl(
+                " ".join(current_match), target, evaluation_method
+            )
             if current_score > best_score:
                 best_match = current_match
                 best_score = current_score
