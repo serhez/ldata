@@ -149,7 +149,7 @@ class ListReversal(Benchmark):
                 best_match = current_match
                 best_score = current_score
 
-        return best_match.join(" ")
+        return " ".join(best_match)
 
 
 try:
