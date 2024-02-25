@@ -131,7 +131,7 @@ class Benchmark(ABC, Dataset):
 
         scores = [
             self._evaluate_impl(
-                self.extract_solution(subject(inputs[i], shots)),
+                self.extract_solution(subject(inputs[i], shots), targets[i]),
                 targets[i],
                 evaluation_method,
             )
