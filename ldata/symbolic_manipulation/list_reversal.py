@@ -53,10 +53,41 @@ class ListReversal(Benchmark):
         return Dataset.Split(inputs, sample.targets)
 
     def _eval_word(self, output: str, target: str) -> float:
+        """
+        Evaluate the output of the model for the list reversal task at the word level.
+
+        ### Parameters
+        ----------
+        `output`: the output of the model.
+        `target`: the target output.
+
+        ### Returns
+        ----------
+        The evaluation score.
+        """
+
         return float(output == target)
 
     def _eval_char(self, output: str, target: str) -> float:
-        return np.mean([float(output[i] == target[i]) for i in range(len(output))])
+        """
+        Evaluate the output of the model for the list reversal task at the character level.
+
+        ### Parameters
+        ----------
+        `output`: the output of the model.
+        `target`: the target output.
+
+        ### Returns
+        ----------
+        The evaluation score.
+        """
+
+        return np.mean(
+            [
+                0.0 if i >= len(target) else float(output[i] == target[i])
+                for i in range(len(output))
+            ]
+        )
 
     def _evaluate_impl(
         self,
