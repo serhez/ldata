@@ -77,20 +77,6 @@ class LetterConcatenation(Benchmark):
         return tot_score / len(output)
 
     def _extract_solution_impl(self, output: str, target: str) -> str:
-        """
-        Extracts the attempted solution from the output and formats it into the `target` format.
-        If no approprate solution is found, an empty string is returned.
-
-        ### Parameters
-        ----------
-        `output`: the output of the model, split by spaces.
-        `target`: the target output, split by spaces.
-
-        ### Returns
-        ----------
-        The extracted and formatted solution.
-        """
-
         # Step 1: clean the output and split it into words
         words = [self._alphanum_pattern.sub("", w) for w in output.split(" ")]
         words = [w for w in words if w != ""]

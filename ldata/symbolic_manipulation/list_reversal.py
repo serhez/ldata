@@ -57,6 +57,7 @@ class ListReversal(Benchmark):
     ) -> float:
         if evaluation_method == Benchmark.EvaluationMethod.EXACT:
             return float(output == target)
+
         elif evaluation_method == Benchmark.EvaluationMethod.WORD:
 
             def eval_item(output: str, target: str) -> float:
@@ -88,20 +89,6 @@ class ListReversal(Benchmark):
         return tot_score / len(output_list)
 
     def _extract_solution_impl(self, output: str, target: str) -> str:
-        """
-        Extracts the attempted solution from the output and formats it into the `target` format.
-        If no approprate solution is found, an empty string is returned.
-
-        ### Parameters
-        ----------
-        `output`: the output of the model, split by spaces.
-        `target`: the target output, split by spaces.
-
-        ### Returns
-        ----------
-        The extracted and formatted solution.
-        """
-
         target_list = target.split(" ")
 
         # Step 1: clean the output and split it into words
