@@ -109,7 +109,7 @@ class ListReversal(Benchmark):
         output_list = output.split(" ")
         target_list = target.split(" ")
 
-        tot_score = np.sum(
+        return np.mean(
             [
                 0.0
                 if i >= len(target_list)
@@ -117,7 +117,6 @@ class ListReversal(Benchmark):
                 for i in range(len(output_list))
             ]
         )
-        return tot_score / len(output_list)
 
     def _extract_solution_impl(
         self,

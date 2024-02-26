@@ -71,13 +71,12 @@ class LetterConcatenation(Benchmark):
             return float(output == target)
 
         # EvaluationMethod.CHARACTER
-        tot_score = np.sum(
+        return np.mean(
             [
                 0.0 if i >= len(target) else float(output[i] == target[i])
                 for i in range(len(output))
             ]
         )
-        return tot_score / len(output)
 
     def _extract_solution_impl(
         self,
