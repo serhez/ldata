@@ -89,7 +89,7 @@ class Benchmark(ABC, Dataset):
 
     def evaluate(
         self,
-        subject: Callable[[str, List[Tuple[str, str]]], str],
+        subject: Callable[[List[str], List[Tuple[str, str]]], List[str]],
         evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
         instructed: bool = True,
@@ -103,7 +103,7 @@ class Benchmark(ABC, Dataset):
 
         ### Parameters
         ----------
-        `subject`: the subject to evaluate, which must be a function that takes a single input string and returns a single output string.
+        `subject`: the subject to evaluate, which must be a function that takes an array of input strings and returns an array of output strings.
         `evaluation_method`: the level of exactness measured by the evaluation metric.
         `aggregation_method`: the method to aggregate the scores of the (input, output) pairs.
         `instructed`: whether to use the instructed test set (as given by `get_instructed`) or the regular test set; also applied to the shots.
@@ -124,18 +124,18 @@ class Benchmark(ABC, Dataset):
 
         inputs = test_set.inputs
         targets = test_set.targets
-
         assert len(inputs) == len(
             targets
         ), "the number of inputs and targets must be the same."
 
+        outputs = subject(inputs, shots)
+        assert (
+            len(outputs) == len(inputs)
+        ), "the number of output strings returned by the subject must be the same as the number of input strings."
+
         scores = [
-            self._evaluate_impl(
-                self.extract_solution(subject(inputs[i], shots), targets[i]),
-                targets[i],
-                evaluation_method,
-            )
-            for i in range(len(inputs))
+            self._evaluate_impl(self.extract_solution(o, t), t, evaluation_method)
+            for o, t in zip(outputs, targets)
         ]
 
         if aggregation_method == self.AggregationMethod.MEAN:
