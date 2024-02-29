@@ -149,12 +149,3 @@ class ListReversal(Benchmark):
                 best_score = current_score
 
         return " ".join(best_match)
-
-
-try:
-    from hydra.core.config_store import ConfigStore
-
-    cs = ConfigStore.instance()
-    cs.store(name="base_list_reversal", node=ListReversal.Config)
-except ModuleNotFoundError:
-    pass

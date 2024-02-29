@@ -5,7 +5,8 @@ from os import path
 from typing import Any, Generic, Iterable, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
-from torch.utils.data import Dataset as TorchDataset
+
+# from torch.utils.data import Dataset as TorchDataset
 
 _InputDType = TypeVar("_InputDType")
 _TargetDType = TypeVar("_TargetDType")
@@ -260,12 +261,3 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
 
     def __iter__(self) -> Dataset.Split:
         return Dataset.Split(zip(self.full_set.inputs, self.full_set.targets))
-
-
-try:
-    from hydra.core.config_store import ConfigStore
-
-    cs = ConfigStore.instance()
-    cs.store(name="base_dataset", node=Dataset.Config)
-except ModuleNotFoundError:
-    pass
