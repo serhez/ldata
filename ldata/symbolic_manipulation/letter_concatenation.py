@@ -88,7 +88,8 @@ class LetterConcatenation(Benchmark):
         words = [self._alphanum_pattern.sub("", w) for w in output.split(" ")]
         words = [w for w in words if w != ""]
 
-        # Step 2: find the word that best match the target, either as a whole or as a concatenation of characters
+        # Step 2: find the sequence that best matches the target,
+        #         either as a single word or as a concatenation of single-character words
         concat_letters = ""
         best_match = ""
         best_score = 0
