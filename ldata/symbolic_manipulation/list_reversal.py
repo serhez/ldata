@@ -1,6 +1,5 @@
 import re
 from dataclasses import dataclass
-from typing import Optional, Union
 
 import numpy as np
 
@@ -35,8 +34,8 @@ class ListReversal(Benchmark):
         self._alphanum_pattern = re.compile("[\W_]+")
 
     def get_instructed(
-        self, sample: Optional[Union[str, Dataset.Split]] = None
-    ) -> Union[str, Dataset.Split]:
+        self, sample: str | Dataset.Split | None = None
+    ) -> str | Dataset.Split:
         super().get_instructed(sample)
 
         if sample is None:

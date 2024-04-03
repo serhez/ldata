@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import MISSING, dataclass
 from os import path
-from typing import Any, Generic, Iterable, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Generic, Iterable, Type, TypeVar
 
 import numpy as np
 
@@ -50,7 +50,7 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
         def __init__(
             self,
             inputs: np.ndarray[_InputDType],
-            targets: np.ndarray[Optional[_TargetDType]],
+            targets: np.ndarray[_TargetDType | None],
         ):
             """
             Initialize the dataset split.
@@ -79,7 +79,7 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
             return self._inputs
 
         @property
-        def targets(self) -> np.ndarray[Optional[_TargetDType]]:
+        def targets(self) -> np.ndarray[_TargetDType | None]:
             """The target data."""
 
             return self._targets
@@ -88,16 +88,18 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
             return len(self._inputs)
 
         def __getitem__(
-            self, idx: Union[int, np.ndarray[int]]
-        ) -> Union[Tuple[_InputDType, Optional[_TargetDType]], Dataset.Split]:
+            self, idx: int | np.ndarray[int]
+        ) -> tuple[_InputDType, _TargetDType | None] | Dataset.Split:
             if isinstance(idx, int):
                 return (self._inputs[idx], self._targets[idx])
             return Dataset.Split(self._inputs[idx], self._targets[idx])
 
-        def __iter__(self) -> Iterable[Tuple[_InputDType, Optional[_TargetDType]]]:
+        def __iter__(self) -> Iterable[tuple[_InputDType, _TargetDType | None]]:
             return zip(self._inputs, self._targets)
 
-        def sample(self, n: int = 1, replace: bool = False) -> Dataset.Split:
+        def sample(
+            self, n: int = 1, replace: bool = False
+        ) -> tuple[_InputDType, _TargetDType | None] | Dataset.Split:
             """
             Get a random sample of the split.
 
@@ -212,19 +214,19 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
         return self.Split(inputs, targets)
 
     @property
-    def train_set(self) -> Split:
+    def train_set(self) -> tuple[_InputDType, _TargetDType | None] | Dataset.Split:
         """The training set."""
 
         return self.full_set[self._train_idxs]
 
     @property
-    def test_set(self) -> Split:
+    def test_set(self) -> tuple[_InputDType, _TargetDType | None] | Dataset.Split:
         """The test set."""
 
         return self.full_set[self._test_idxs]
 
     @property
-    def shots(self) -> Split:
+    def shots(self) -> tuple[_InputDType, _TargetDType | None] | Dataset.Split:
         """The shots used for in-context learning."""
 
         return self.full_set[self._shots_idxs]
@@ -253,11 +255,11 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
         return self.train_len + self.test_len
 
     def __getitem__(
-        self, idx: Union[int, np.ndarray[int]]
-    ) -> Union[Tuple[_InputDType, Optional[_TargetDType]], Dataset.Split]:
+        self, idx: int | np.ndarray[int]
+    ) -> tuple[_InputDType, _TargetDType | None] | Dataset.Split:
         if isinstance(idx, int):
             return (self.full_set.inputs[idx], self.full_set.targets[idx])
         return Dataset.Split(self.full_set.inputs[idx], self.full_set.targets[idx])
 
     def __iter__(self) -> Dataset.Split:
-        return Dataset.Split(zip(self.full_set.inputs, self.full_set.targets))
+        return Dataset.Split(self.full_set.inputs, self.full_set.targets)

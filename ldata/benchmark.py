@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import MISSING, dataclass
 from enum import Enum
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable
 
 import numpy as np
 
@@ -58,8 +58,8 @@ class Benchmark(ABC, Dataset):
 
     @abstractmethod
     def get_instructed(
-        self, sample: Optional[Union[str, Dataset.Split]] = None
-    ) -> Union[str, Dataset.Split]:
+        self, sample: str | Dataset.Split | None = None
+    ) -> str | Dataset.Split:
         """
         Add instructions relevant to solve the task to the sample.
 
@@ -89,11 +89,11 @@ class Benchmark(ABC, Dataset):
 
     def evaluate(
         self,
-        subject: Callable[[List[str], List[Tuple[str, str]]], List[str]],
+        subject: Callable[[list[str], list[tuple[str, str]]], list[str]],
         evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
         instructed: bool = True,
-    ) -> Union[float, List[float]]:
+    ) -> float | list[float]:
         """
         Evaluate the subjects on the benchmark.
         The evaluation metric and the the possible range of score values should be available in the benchmark's documentation.
@@ -183,10 +183,10 @@ class Benchmark(ABC, Dataset):
 
     def extract_solution(
         self,
-        outputs: Union[str, List[str]],
-        targets: Union[str, List[str]],
+        outputs: str | list[str],
+        targets: str | list[str],
         evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
-    ) -> Union[str, List[str]]:
+    ) -> str | list[str]:
         """
         Extracts the attempted solution from the output and formats it into the `target` format.
         If no approprate solution is found, an empty string is returned.

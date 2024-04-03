@@ -3,7 +3,7 @@ from .dataset import Dataset
 from .symbolic_manipulation import LetterConcatenation, ListReversal
 
 __all__ = [
-    "sybolic_manipulation",
+    "symbolic_manipulation",
     "Benchmark",
     "Dataset",
     "ListReversal",
