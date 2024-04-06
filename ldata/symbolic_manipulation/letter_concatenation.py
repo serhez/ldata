@@ -129,7 +129,7 @@ class LetterConcatenation(Benchmark):
         return Dataset.Split(inputs, sample.targets)
 
     @classmethod
-    def evaluate_output(
+    def _evaluate_output_impl(
         cls,
         output: str,
         target: str,

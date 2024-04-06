@@ -160,7 +160,7 @@ class Benchmark(ABC, Dataset):
         ), "the number of output strings returned by the subject must be the same as the number of input strings."
 
         scores = [
-            self.evaluate_output(self.extract_solution(o, t), t, evaluation_method)
+            self.evaluate_output(o, t, evaluation_method)
             for o, t in zip(outputs, targets)
         ]
 
@@ -186,7 +186,6 @@ class Benchmark(ABC, Dataset):
 
     __call__: Callable[..., Any] = _call_impl
 
-    @abstractmethod
     @classmethod
     def evaluate_output(
         cls, output: str, target: str, evaluation_method: EvaluationMethod
@@ -194,6 +193,30 @@ class Benchmark(ABC, Dataset):
         """
         The benchmark's internal implementation of `evaluate` acting on a single (input, output) pair; do not call this method directly.
         It is recommended for the scores to be in the range of [0.0, 1.0] and to increase linearly with the quality of the results.
+
+        ### Parameters
+        ----------
+        `output`: the output of the subject.
+        `target`: the target output.
+        `evaluation_method`: the level of exactness measured by the evaluation metric.
+
+        ### Returns
+        -------
+        The score of the output.
+        """
+
+        return cls._evaluate_output_impl(
+            cls.extract_solution(output, target), target, evaluation_method
+        )
+
+    @abstractmethod
+    @classmethod
+    def _evaluate_output_impl(
+        cls, output: str, target: str, evaluation_method: EvaluationMethod
+    ) -> float:
+        """
+        The child class' internal implementation of `evaluate_output`.
+        It can be assumed that `output` is an extracted solution via `extract_solution`, i.e., it follows the format of the `target`.
 
         ### Parameters
         ----------

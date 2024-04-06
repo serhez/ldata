@@ -154,7 +154,7 @@ class ListReversal(Benchmark):
         )
 
     @classmethod
-    def evaluate_output(
+    def _evaluate_output_impl(
         cls,
         output: str,
         target: str,
