@@ -150,6 +150,29 @@ class LetterConcatenation(Benchmark):
         )
 
     @classmethod
+    def extract_letter_idx(cls, sample: str) -> int:
+        """
+        Extract the index of the character to concatenate from an instructed input sample.
+
+        ### Parameters
+        ----------
+        `sample`: the instructed input sample.
+
+        ### Returns
+        ----------
+        The index of the character to concatenate.
+        """
+
+        try:
+            letter_ixd = int(sample.split(" ")[9])
+        except Exception:
+            raise ValueError(
+                "The input sample does not follow the instructed format of this benchmark."
+            )
+
+        return letter_ixd
+
+    @classmethod
     def _extract_solution_impl(
         cls,
         output: str,
