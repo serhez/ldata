@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from dataclasses import MISSING, dataclass
 from os import path
 from typing import Any, Generic, Iterable, Type, TypeVar
@@ -263,3 +264,18 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
 
     def __iter__(self) -> Dataset.Split:
         return Dataset.Split(self.full_set.inputs, self.full_set.targets)
+
+    @abstractmethod
+    @classmethod
+    def build(cls, path: str, n_samples: int, **kwargs: Any):
+        """
+        Build the dataset and save it to a file.
+
+        ### Parameters
+        ----------
+        `path`: the path to save the dataset to.
+        `n_samples`: the number of samples to generate.
+        `**kwargs`: additional keyword arguments specific to the child class.
+        """
+
+        raise NotImplementedError

@@ -1,7 +1,9 @@
+import random
 import re
 from dataclasses import MISSING, dataclass
 
 import numpy as np
+import requests
 
 from ldata.benchmark import Benchmark
 from ldata.dataset import Dataset
@@ -14,6 +16,8 @@ class LetterConcatenation(Benchmark):
     The range of score values is [0.0, 1.0].
     """
 
+    _ALPHANUM_PATTERN = re.compile("[\W_]+")
+
     @dataclass(kw_only=True)
     class Config(Benchmark.Config):
         """The configuration of the letter concatenation benchmark."""
@@ -21,7 +25,7 @@ class LetterConcatenation(Benchmark):
         name: str = "LetterConcatenation"
         """The name of the benchmark."""
 
-        i: int = MISSING
+        letter_idx: int = MISSING
         """The character's index of the words to concatenate."""
 
     def __init__(self, config: Config):
@@ -34,7 +38,50 @@ class LetterConcatenation(Benchmark):
         """
 
         super().__init__(config)
-        self._alphanum_pattern = re.compile("[\W_]+")
+
+    @classmethod
+    def compute_target(cls, input: str, letter_idx: int) -> str:
+        return "".join([word[letter_idx] for word in input.split(" ")])
+
+    @classmethod
+    def build(cls, path: str, n_samples: int, n_words: int, letter_idx: int):
+        """
+        Build the letter concatenation dataset.
+
+        ### Parameters
+        ----------
+        `path`: the path to save the dataset.
+        `n_samples`: the number of samples to generate.
+        `n_words`: the number of words in each sample.
+        `letter_idx`: the index of the character to concatenate.
+        """
+
+        # Create a list of words
+        response = requests.get("https://www.mit.edu/~ecprice/wordlist.10000")
+        all_words = response.content.splitlines()
+
+        # Remove spaces from the words
+        all_words = [word.decode("utf-8") for word in all_words]
+        all_words = [
+            word
+            for word in all_words
+            if len(word) > letter_idx and all(char.isalpha() for char in word)
+        ]
+
+        # Create N_SAMPLES lists of N_WORDS words chosen randomly from the list
+        samples = [
+            " ".join(random.choices(all_words, k=n_words))
+            for _ in range(int(n_samples))
+        ]
+
+        # Generate the targets
+        targets = [cls.compute_target(sample, letter_idx) for sample in samples]
+
+        # Write the samples and targets to a csv file
+        with open(path, "w") as file:
+            file.write("SAMPLE,TARGET\n")
+            for sample, target in zip(samples, targets):
+                file.write(f"{sample},{target}\n")
 
     def get_instructed(
         self, sample: str | Dataset.Split | None = None
@@ -57,8 +104,33 @@ class LetterConcatenation(Benchmark):
         )
         return Dataset.Split(inputs, sample.targets)
 
-    def _evaluate_impl(
-        self,
+    def get_uninstructed(
+        self, sample: str | Dataset.Split | None = None
+    ) -> str | Dataset.Split:
+        super().get_uninstructed(sample)
+
+        if sample is None:
+            sample = self.test_set
+
+        if isinstance(sample, str):
+            search = re.search(r"\[(.*?)\]", sample)
+            if search is None:
+                return sample
+            return " ".join(search.group(1).split(", "))
+
+        inputs = np.empty(len(sample.inputs), dtype=np.str_)
+        for i, s in enumerate(sample.inputs):
+            search = re.search(r"\[(.*?)\]", s)
+            if search is None:
+                inputs[i] = s
+            else:
+                inputs[i] = " ".join(search.group(1).split(", "))
+
+        return Dataset.Split(inputs, sample.targets)
+
+    @classmethod
+    def evaluate_output(
+        cls,
         output: str,
         target: str,
         evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
@@ -77,14 +149,15 @@ class LetterConcatenation(Benchmark):
             ]
         )
 
+    @classmethod
     def _extract_solution_impl(
-        self,
+        cls,
         output: str,
         target: str,
         evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
     ) -> str:
         # Step 1: clean the output and split it into words
-        words = [self._alphanum_pattern.sub("", w) for w in output.split(" ")]
+        words = [cls._ALPHANUM_PATTERN.sub("", w) for w in output.split(" ")]
         words = [w for w in words if w != ""]
 
         # Step 2: find the sequence that best matches the target,
@@ -98,7 +171,7 @@ class LetterConcatenation(Benchmark):
                 concat_letters += w
             else:
                 # Score the word
-                current_score = self._evaluate_impl(w, target, evaluation_method)
+                current_score = cls.evaluate_output(w, target, evaluation_method)
                 if current_score > best_score:
                     best_match = w
                     best_score = current_score
@@ -108,7 +181,7 @@ class LetterConcatenation(Benchmark):
                 continue
 
             # Score the concatenated contiguous letters
-            current_score = self._evaluate_impl(
+            current_score = cls.evaluate_output(
                 concat_letters, target, evaluation_method
             )
             if current_score > best_score:

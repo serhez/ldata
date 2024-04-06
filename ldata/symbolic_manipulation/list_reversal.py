@@ -1,7 +1,9 @@
+import random
 import re
 from dataclasses import dataclass
 
 import numpy as np
+import requests
 
 from ldata.benchmark import Benchmark
 from ldata.dataset import Dataset
@@ -13,6 +15,8 @@ class ListReversal(Benchmark):
     The evaluation metric is the number of correct element positions in the output list, normalized by the number of elements.
     The range of score values is [0.0, 1.0].
     """
+
+    _ALPHANUM_PATTERN = re.compile("[\W_]+")
 
     @dataclass(kw_only=True)
     class Config(Benchmark.Config):
@@ -31,7 +35,44 @@ class ListReversal(Benchmark):
         """
 
         super().__init__(config)
-        self._alphanum_pattern = re.compile("[\W_]+")
+
+    @classmethod
+    def compute_target(cls, input: str) -> str:
+        return " ".join(input.split(" ")[::-1])
+
+    @classmethod
+    def build(cls, path: str, n_samples: int, n_words: int):
+        """
+        Build the list reversal benchmark.
+
+        ### Parameters
+        ----------
+        `path`: the path to save the dataset.
+        `n_samples`: the number of samples to generate.
+        `n_words`: the number of words in each sample.
+        """
+        # Create a list of words
+        response = requests.get("https://www.mit.edu/~ecprice/wordlist.10000")
+        all_words = response.content.splitlines()
+
+        # Remove spaces from the words
+        all_words = [word.decode("utf-8") for word in all_words]
+        all_words = [word for word in all_words if all(char.isalpha() for char in word)]
+
+        # Create N_SAMPLES lists of N_WORDS words chosen randomly from the list
+        samples = [
+            " ".join(random.choices(all_words, k=n_words))
+            for _ in range(int(n_samples))
+        ]
+
+        # Generate the targets
+        targets = [cls.compute_target(sample) for sample in samples]
+
+        # Write the samples and targets to a csv file
+        with open(path, "w") as file:
+            file.write("SAMPLE,TARGET\n")
+            for sample, target in zip(samples, targets):
+                file.write(f"{sample},{target}\n")
 
     def get_instructed(
         self, sample: str | Dataset.Split | None = None
@@ -51,7 +92,30 @@ class ListReversal(Benchmark):
         )
         return Dataset.Split(inputs, sample.targets)
 
-    def _eval_word(self, output: str, target: str) -> float:
+    def get_uninstructed(
+        self, sample: str | Dataset.Split | None = None
+    ) -> str | Dataset.Split:
+        if sample is None:
+            sample = self.test_set
+
+        if isinstance(sample, str):
+            search = re.search(r"\[(.*?)\]", sample)
+            if search is None:
+                return sample
+            return " ".join(search.group(1).split(", "))
+
+        inputs = np.empty(len(sample.inputs), dtype=np.str_)
+        for i, s in enumerate(sample.inputs):
+            search = re.search(r"\[(.*?)\]", s)
+            if search is None:
+                inputs[i] = s
+            else:
+                inputs[i] = " ".join(search.group(1).split(", "))
+
+        return Dataset.Split(inputs, sample.targets)
+
+    @classmethod
+    def _eval_word(cls, output: str, target: str) -> float:
         """
         Evaluate the output of the model for the list reversal task at the word level.
 
@@ -67,7 +131,8 @@ class ListReversal(Benchmark):
 
         return float(output == target)
 
-    def _eval_char(self, output: str, target: str) -> float:
+    @classmethod
+    def _eval_char(cls, output: str, target: str) -> float:
         """
         Evaluate the output of the model for the list reversal task at the character level.
 
@@ -88,8 +153,9 @@ class ListReversal(Benchmark):
             ]
         )
 
-    def _evaluate_impl(
-        self,
+    @classmethod
+    def evaluate_output(
+        cls,
         output: str,
         target: str,
         evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
@@ -97,9 +163,9 @@ class ListReversal(Benchmark):
         if evaluation_method == Benchmark.EvaluationMethod.EXACT:
             return float(output == target)
         elif evaluation_method == Benchmark.EvaluationMethod.WORD:
-            eval_fn = self._eval_word
+            eval_fn = cls._eval_word
         elif evaluation_method == Benchmark.EvaluationMethod.CHARACTER:
-            eval_fn = self._eval_char
+            eval_fn = cls._eval_char
         else:
             raise NotImplementedError(
                 f"Evaluation method {evaluation_method} is not implemented for this dataset."
@@ -117,8 +183,9 @@ class ListReversal(Benchmark):
             ]
         )
 
+    @classmethod
     def _extract_solution_impl(
-        self,
+        cls,
         output: str,
         target: str,
         evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
@@ -126,7 +193,7 @@ class ListReversal(Benchmark):
         target_list = target.split(" ")
 
         # Step 1: clean the output and split it into words
-        words = [self._alphanum_pattern.sub("", w) for w in output.split(" ")]
+        words = [cls._ALPHANUM_PATTERN.sub("", w) for w in output.split(" ")]
         words = [w for w in words if w != ""]
 
         # Step 2: find the longest sequence of words that are in the target list
@@ -140,7 +207,7 @@ class ListReversal(Benchmark):
             else:
                 current_match = words[i:end]
 
-            current_score = self._evaluate_impl(
+            current_score = cls.evaluate_output(
                 " ".join(current_match), target, evaluation_method
             )
             if current_score > best_score:

@@ -75,7 +75,7 @@ class Benchmark(ABC, Dataset):
 
         ### Raises
         ----------
-        `ValueError`: if `sample` is neither a `Dataset.Split` nor a string.
+        `ValueError`: if `sample` is neither a `Dataset.Split` nor a string nor `None`.
         """
 
         if (
@@ -87,7 +87,33 @@ class Benchmark(ABC, Dataset):
                 f"`sample` must be either `None`, a `Dataset.Split` or a string, not {type(sample)}."
             )
 
-    def evaluate(
+    @abstractmethod
+    def get_uninstructed(
+        self, sample: str | Dataset.Split | None = None
+    ) -> str | Dataset.Split:
+        """
+        Remove instructions from the sample.
+
+        ### Parameters
+        ----------
+        [optional] `sample`: the sample to remove instructions from.
+        - If `None`, the test set is used.
+
+        ### Returns
+        ----------
+        The sample without instructions.
+
+        ### Raises
+        ----------
+        `ValueError`: if `sample` is neither a `Dataset.Split` nor a string.
+        """
+
+        if not isinstance(sample, Dataset.Split) and not isinstance(sample, str):
+            raise ValueError(
+                f"`sample` must be either a `Dataset.Split` or a string, not {type(sample)}."
+            )
+
+    def evaluate_subject(
         self,
         subject: Callable[[list[str], list[tuple[str, str]]], list[str]],
         evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
@@ -134,7 +160,7 @@ class Benchmark(ABC, Dataset):
         ), "the number of output strings returned by the subject must be the same as the number of input strings."
 
         scores = [
-            self._evaluate_impl(self.extract_solution(o, t), t, evaluation_method)
+            self.evaluate_output(self.extract_solution(o, t), t, evaluation_method)
             for o, t in zip(outputs, targets)
         ]
 
@@ -156,13 +182,14 @@ class Benchmark(ABC, Dataset):
             )
 
     def _call_impl(self, *args, **kwargs):
-        return self.evaluate(*args, **kwargs)
+        return self.evaluate_subject(*args, **kwargs)
 
     __call__: Callable[..., Any] = _call_impl
 
     @abstractmethod
-    def _evaluate_impl(
-        self, output: str, target: str, evaluation_method: EvaluationMethod
+    @classmethod
+    def evaluate_output(
+        cls, output: str, target: str, evaluation_method: EvaluationMethod
     ) -> float:
         """
         The benchmark's internal implementation of `evaluate` acting on a single (input, output) pair; do not call this method directly.
@@ -181,8 +208,27 @@ class Benchmark(ABC, Dataset):
 
         raise NotImplementedError
 
+    @abstractmethod
+    @classmethod
+    def compute_target(cls, input: str, **kwargs: Any) -> str:
+        """
+        Compute the target output for the input.
+
+        ### Parameters
+        ----------
+        `input`: the input string.
+        `instructed`: whether the input is instructed or raw.
+
+        ### Returns
+        ----------
+        The target output.
+        """
+
+        raise NotImplementedError
+
+    @classmethod
     def extract_solution(
-        self,
+        cls,
         outputs: str | list[str],
         targets: str | list[str],
         evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
@@ -209,19 +255,20 @@ class Benchmark(ABC, Dataset):
 
         if isinstance(outputs, list) and isinstance(targets, list):
             return [
-                self._extract_solution_impl(o, t, evaluation_method)
+                cls._extract_solution_impl(o, t, evaluation_method)
                 for o, t in zip(outputs, targets)
             ]
         elif isinstance(outputs, str) and isinstance(targets, str):
-            return self._extract_solution_impl(outputs, targets, evaluation_method)
+            return cls._extract_solution_impl(outputs, targets, evaluation_method)
         else:
             raise ValueError(
                 f"`outputs` and `targets` must be either both lists of strings or both strings, not {type(outputs)} and {type(targets)}."
             )
 
     @abstractmethod
+    @classmethod
     def _extract_solution_impl(
-        self,
+        cls,
         output: str,
         target: str,
         evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
