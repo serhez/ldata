@@ -209,8 +209,8 @@ class Benchmark(ABC, Dataset):
             cls.extract_solution(output, target), target, evaluation_method
         )
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def _evaluate_output_impl(
         cls, output: str, target: str, evaluation_method: EvaluationMethod
     ) -> float:
@@ -231,8 +231,8 @@ class Benchmark(ABC, Dataset):
 
         raise NotImplementedError
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def compute_target(cls, input: str, **kwargs: Any) -> str:
         """
         Compute the target output for the input.
@@ -288,8 +288,8 @@ class Benchmark(ABC, Dataset):
                 f"`outputs` and `targets` must be either both lists of strings or both strings, not {type(outputs)} and {type(targets)}."
             )
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def _extract_solution_impl(
         cls,
         output: str,

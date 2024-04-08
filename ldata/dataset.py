@@ -265,8 +265,8 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
     def __iter__(self) -> Dataset.Split:
         return Dataset.Split(self.full_set.inputs, self.full_set.targets)
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def build(cls, path: str, n_samples: int, **kwargs: Any):
         """
         Build the dataset and save it to a file.
