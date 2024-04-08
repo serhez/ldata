@@ -144,9 +144,10 @@ class LetterConcatenation(Benchmark):
         # EvaluationMethod.CHARACTER
         return np.mean(
             [
-                0.0 if i >= len(target) else float(output[i] == target[i])
-                for i in range(len(output))
+                float(output[i] == target[i])
+                for i in range(min(len(output), len(target)))
             ]
+            + [0.0] * abs(len(output) - len(target))
         )
 
     @classmethod
@@ -173,42 +174,24 @@ class LetterConcatenation(Benchmark):
         return letter_ixd
 
     @classmethod
-    def _extract_solution_impl(
-        cls,
-        output: str,
-        target: str,
-        evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
-    ) -> str:
-        # Step 1: clean the output and split it into words
-        words = [cls._ALPHANUM_PATTERN.sub("", w) for w in output.split(" ")]
-        words = [w for w in words if w != ""]
+    def _extract_solution_impl(cls, output: str, target: str) -> str:
+        # Step 1: clean the output
+        output = cls._ALPHANUM_PATTERN.sub("", output)
 
         # Step 2: find the sequence that best matches the target,
         #         either as a single word or as a concatenation of single-character words
-        concat_letters = ""
         best_match = ""
         best_score = 0
-        for w in words:
-            if len(w) == 1:
-                # Add the letter to the concatenation
-                concat_letters += w
-            else:
-                # Score the word
-                current_score = cls.evaluate_output(w, target, evaluation_method)
+        for s in range(len(output)):
+            for e in range(s + 1, len(output) + 1):
+                current_match = output[s:e]
+
+                # Score the concatenated contiguous letters
+                current_score = cls._evaluate_output_impl(
+                    current_match, target, Benchmark.EvaluationMethod.CHARACTER
+                )
                 if current_score > best_score:
-                    best_match = w
+                    best_match = current_match
                     best_score = current_score
-
-                # Reset the concatenated contiguous letters
-                concat_letters = ""
-                continue
-
-            # Score the concatenated contiguous letters
-            current_score = cls.evaluate_output(
-                concat_letters, target, evaluation_method
-            )
-            if current_score > best_score:
-                best_match = concat_letters
-                best_score = current_score
 
         return best_match

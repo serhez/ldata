@@ -176,42 +176,31 @@ class ListReversal(Benchmark):
 
         return np.mean(
             [
-                0.0
-                if i >= len(target_list)
-                else eval_fn(output_list[i], target_list[i])
-                for i in range(len(output_list))
+                eval_fn(output_list[i], target_list[i])
+                for i in range(min(len(output_list), len(target_list)))
             ]
+            + [0.0] * abs(len(output_list) - len(target_list))
         )
 
     @classmethod
-    def _extract_solution_impl(
-        cls,
-        output: str,
-        target: str,
-        evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
-    ) -> str:
-        target_list = target.split(" ")
-
+    def _extract_solution_impl(cls, output: str, target: str) -> str:
         # Step 1: clean the output and split it into words
         words = [cls._ALPHANUM_PATTERN.sub("", w) for w in output.split(" ")]
         words = [w for w in words if w != ""]
 
         # Step 2: find the longest sequence of words that are in the target list
-        current_match = []
         best_match = []
         best_score = 0
-        for i in range(len(words)):
-            end = i + len(target_list)
-            if end >= len(words):
-                current_match = words[i:]
-            else:
-                current_match = words[i:end]
-
-            current_score = cls.evaluate_output(
-                " ".join(current_match), target, evaluation_method
-            )
-            if current_score > best_score:
-                best_match = current_match
-                best_score = current_score
+        for s in range(len(words)):
+            for e in range(s + 1, len(words) + 1):
+                current_match = words[s:e]
+                current_score = cls._evaluate_output_impl(
+                    " ".join(current_match),
+                    target,
+                    Benchmark.EvaluationMethod.CHARACTER,
+                )
+                if current_score > best_score:
+                    best_match = current_match
+                    best_score = current_score
 
         return " ".join(best_match)

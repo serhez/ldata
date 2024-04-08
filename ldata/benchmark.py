@@ -160,7 +160,7 @@ class Benchmark(ABC, Dataset):
         ), "the number of output strings returned by the subject must be the same as the number of input strings."
 
         scores = [
-            self.evaluate_output(o, t, evaluation_method)
+            self.evaluate_output(o, t, evaluation_method)[1]
             for o, t in zip(outputs, targets)
         ]
 
@@ -189,7 +189,7 @@ class Benchmark(ABC, Dataset):
     @classmethod
     def evaluate_output(
         cls, output: str, target: str, evaluation_method: EvaluationMethod
-    ) -> float:
+    ) -> tuple[str, float]:
         """
         The benchmark's internal implementation of `evaluate` acting on a single (input, output) pair; do not call this method directly.
         It is recommended for the scores to be in the range of [0.0, 1.0] and to increase linearly with the quality of the results.
@@ -202,12 +202,13 @@ class Benchmark(ABC, Dataset):
 
         ### Returns
         -------
-        The score of the output.
+        A tuple containing the found solution (via `extract_solution`) and the score of the solution.
         """
 
-        return cls._evaluate_output_impl(
-            cls.extract_solution(output, target), target, evaluation_method
-        )
+        found_solution = cls.extract_solution(output, target)
+        score = cls._evaluate_output_impl(found_solution, target, evaluation_method)
+
+        return found_solution, score
 
     @classmethod
     @abstractmethod
@@ -251,10 +252,7 @@ class Benchmark(ABC, Dataset):
 
     @classmethod
     def extract_solution(
-        cls,
-        outputs: str | list[str],
-        targets: str | list[str],
-        evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
+        cls, outputs: str | list[str], targets: str | list[str]
     ) -> str | list[str]:
         """
         Extracts the attempted solution from the output and formats it into the `target` format.
@@ -264,7 +262,6 @@ class Benchmark(ABC, Dataset):
         ----------
         `outputs`: the output of the model, split by spaces.
         `targets`: the target output, split by spaces.
-        `evaluation_method`: the level of exactness measured by the evaluation metric.
 
         ### Returns
         ----------
@@ -277,12 +274,9 @@ class Benchmark(ABC, Dataset):
         """
 
         if isinstance(outputs, list) and isinstance(targets, list):
-            return [
-                cls._extract_solution_impl(o, t, evaluation_method)
-                for o, t in zip(outputs, targets)
-            ]
+            return [cls._extract_solution_impl(o, t) for o, t in zip(outputs, targets)]
         elif isinstance(outputs, str) and isinstance(targets, str):
-            return cls._extract_solution_impl(outputs, targets, evaluation_method)
+            return cls._extract_solution_impl(outputs, targets)
         else:
             raise ValueError(
                 f"`outputs` and `targets` must be either both lists of strings or both strings, not {type(outputs)} and {type(targets)}."
@@ -290,12 +284,7 @@ class Benchmark(ABC, Dataset):
 
     @classmethod
     @abstractmethod
-    def _extract_solution_impl(
-        cls,
-        output: str,
-        target: str,
-        evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
-    ) -> str:
+    def _extract_solution_impl(cls, output: str, target: str) -> str:
         """
         The benchmark's internal implementation of `extract_solution`.
 
@@ -303,7 +292,6 @@ class Benchmark(ABC, Dataset):
         ----------
         `output`: the output of the model, split by spaces.
         `target`: the target output, split by spaces.
-        `evaluation_method`: the level of exactness measured by the evaluation metric.
 
         ### Returns
         ----------
