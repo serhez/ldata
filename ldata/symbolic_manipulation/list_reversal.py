@@ -17,6 +17,9 @@ class ListReversal(Benchmark):
     """
 
     _ALPHANUM_PATTERN = re.compile("[\W_]+")
+    _INSTRUCTIONS_TEMPLATE = (
+        "Reverse the order of the items in the following list: [{}]."
+    )
 
     @dataclass(kw_only=True)
     class Config(Benchmark.Config):
@@ -82,13 +85,14 @@ class ListReversal(Benchmark):
         if sample is None:
             sample = self.test_set
 
-        instructions = "Reverse the order of the items in the following list: [{}]."
-
         if isinstance(sample, str):
-            return instructions.format(", ".join(sample.split(" ")))
+            return self._INSTRUCTIONS_TEMPLATE.format(", ".join(sample.split(" ")))
 
         inputs = np.array(
-            [instructions.format(", ".join(s.split(" "))) for s in sample.inputs]
+            [
+                self._INSTRUCTIONS_TEMPLATE.format(", ".join(s.split(" ")))
+                for s in sample.inputs
+            ]
         )
         return Dataset.Split(inputs, sample.targets)
 

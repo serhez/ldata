@@ -17,6 +17,7 @@ class LetterConcatenation(Benchmark):
     """
 
     _ALPHANUM_PATTERN = re.compile("[\W_]+")
+    _INSTRUCTIONS_TEMPLATE = "Concatenate the characters with index {} of each word in the following list: [{}]. Indices start at zero."
 
     @dataclass(kw_only=True)
     class Config(Benchmark.Config):
@@ -91,14 +92,16 @@ class LetterConcatenation(Benchmark):
         if sample is None:
             sample = self.test_set
 
-        instructions = "Concatenate the characters with index {} of each word in the following list: [{}]. Indices start at zero."
-
         if isinstance(sample, str):
-            return instructions.format(self._config.i, ", ".join(sample.split(" ")))
+            return self._INSTRUCTIONS_TEMPLATE.format(
+                self._config.letter_idx, ", ".join(sample.split(" "))
+            )
 
         inputs = np.array(
             [
-                instructions.format(self._config.i, ", ".join(s.split(" ")))
+                self._INSTRUCTIONS_TEMPLATE.format(
+                    self._config.letter_idx, ", ".join(s.split(" "))
+                )
                 for s in sample.inputs
             ]
         )
