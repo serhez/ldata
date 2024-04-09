@@ -87,8 +87,6 @@ class LetterConcatenation(Benchmark):
     def get_instructed(
         self, sample: str | Dataset.Split | None = None
     ) -> str | Dataset.Split:
-        super().get_instructed(sample)
-
         if sample is None:
             sample = self.test_set
 

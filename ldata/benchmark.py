@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable
+from typing import Any, Callable, overload
 
 import numpy as np
 
@@ -26,7 +26,6 @@ class Benchmark(ABC, Dataset):
         MAX = "max"
         MIN = "min"
         SUM = "sum"
-        NONE = "none"
 
     class EvaluationMethod(Enum):
         """The level of exactness measured by the evaluation metric."""
@@ -57,9 +56,25 @@ class Benchmark(ABC, Dataset):
         return self._name
 
     @abstractmethod
-    def get_instructed(
-        self, sample: str | Dataset.Split | None = None
-    ) -> str | Dataset.Split:
+    @overload
+    def get_instructed(self, sample: str) -> str:
+        """
+        Add instructions relevant to solve the task to the sample.
+
+        ### Parameters
+        ----------
+        `sample`: the sample to add instructions to.
+
+        ### Returns
+        ----------
+        The sample with instructions.
+        """
+
+        ...
+
+    @abstractmethod
+    @overload
+    def get_instructed(self, sample: Dataset.Split | None = None) -> Dataset.Split:
         """
         Add instructions relevant to solve the task to the sample.
 
@@ -70,27 +85,34 @@ class Benchmark(ABC, Dataset):
 
         ### Returns
         ----------
-        The sample with instructions.
-        - If `sample` is a `Dataset.Split`, the instructions are added to the inputs only.
-
-        ### Raises
-        ----------
-        `ValueError`: if `sample` is neither a `Dataset.Split` nor a string nor `None`.
+        The sample with instructions; the instructions are added to the inputs only.
         """
 
-        if (
-            sample is not None
-            and not isinstance(sample, Dataset.Split)
-            and not isinstance(sample, str)
-        ):
-            raise ValueError(
-                f"`sample` must be either `None`, a `Dataset.Split` or a string, not {type(sample)}."
-            )
+        ...
 
     @abstractmethod
-    def get_uninstructed(
-        self, sample: str | Dataset.Split | None = None
-    ) -> str | Dataset.Split:
+    def get_instructed(self, sample=None) -> str | Dataset.Split: ...
+
+    @abstractmethod
+    @overload
+    def get_uninstructed(self, sample: str) -> str:
+        """
+        Remove instructions from the sample.
+
+        ### Parameters
+        ----------
+        `sample`: the sample to remove instructions from.
+
+        ### Returns
+        ----------
+        The sample without instructions.
+        """
+
+        ...
+
+    @abstractmethod
+    @overload
+    def get_uninstructed(self, sample: Dataset.Split | None = None) -> Dataset.Split:
         """
         Remove instructions from the sample.
 
@@ -101,25 +123,22 @@ class Benchmark(ABC, Dataset):
 
         ### Returns
         ----------
-        The sample without instructions.
-
-        ### Raises
-        ----------
-        `ValueError`: if `sample` is neither a `Dataset.Split` nor a string.
+        The sample without instructions; the instructions are removed from the inputs only.
         """
 
-        if not isinstance(sample, Dataset.Split) and not isinstance(sample, str):
-            raise ValueError(
-                f"`sample` must be either a `Dataset.Split` or a string, not {type(sample)}."
-            )
+        ...
+
+    @abstractmethod
+    def get_uninstructed(self, sample=None) -> str | Dataset.Split: ...
 
     def evaluate_subject(
         self,
         subject: Callable[[list[str], list[tuple[str, str]]], list[str]],
+        n_samples: int | None = None,
         evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
         instructed: bool = True,
-    ) -> float | list[float]:
+    ) -> float:
         """
         Evaluate the subjects on the benchmark.
         The evaluation metric and the the possible range of score values should be available in the benchmark's documentation.
@@ -130,6 +149,8 @@ class Benchmark(ABC, Dataset):
         ### Parameters
         ----------
         `subject`: the subject to evaluate, which must be a function that takes an array of input strings and returns an array of output strings.
+        `n_samples`: the number of samples to evaluate the subject on.
+        - If `None` (default), the whole test set is used.
         `evaluation_method`: the level of exactness measured by the evaluation metric.
         `aggregation_method`: the method to aggregate the scores of the (input, output) pairs.
         `instructed`: whether to use the instructed test set (as given by `get_instructed`) or the regular test set; also applied to the shots.
@@ -137,8 +158,6 @@ class Benchmark(ABC, Dataset):
         ### Returns
         ----------
         The aggregated score of the outputs.
-        - If `aggregation_method` is `AggregationMethod.NONE`, the return value is a list of scores, one for each (input, output) pair.
-        - Otherwise, the return value is a single score, which is the result of the aggregation method.
         """
 
         if instructed:
@@ -147,6 +166,10 @@ class Benchmark(ABC, Dataset):
         else:
             test_set = self.test_set
             shots = self.shots
+
+        if n_samples is not None:
+            # choose a random subset of the test set
+            test_set = test_set.sample(n_samples)
 
         inputs = test_set.inputs
         targets = test_set.targets
@@ -165,17 +188,15 @@ class Benchmark(ABC, Dataset):
         ]
 
         if aggregation_method == self.AggregationMethod.MEAN:
-            return np.mean(scores)
+            return float(np.mean(scores))
         elif aggregation_method == self.AggregationMethod.MEDIAN:
-            return np.median(scores)
+            return float(np.median(scores))
         elif aggregation_method == self.AggregationMethod.MAX:
             return np.max(scores)
         elif aggregation_method == self.AggregationMethod.MIN:
             return np.min(scores)
         elif aggregation_method == self.AggregationMethod.SUM:
             return np.sum(scores)
-        elif aggregation_method == self.AggregationMethod.NONE:
-            return scores
         else:
             raise ValueError(
                 f"aggregation method '{aggregation_method}' is not supported."
@@ -230,7 +251,7 @@ class Benchmark(ABC, Dataset):
         The score of the output.
         """
 
-        raise NotImplementedError
+        ...
 
     @classmethod
     @abstractmethod
@@ -248,10 +269,34 @@ class Benchmark(ABC, Dataset):
         The target output.
         """
 
-        raise NotImplementedError
+        ...
 
     @classmethod
-    def extract_solution(cls, outputs: list[str], targets: list[str]) -> list[str]:
+    @overload
+    def extract_solution(cls, output: list[str], target: list[str]) -> list[str]:
+        """
+        Extracts the attempted solution from the outputs and formats it into the `target` format.
+        If no approprate solution is found, an empty string is returned.
+
+        ### Parameters
+        ----------
+        `outputs`: the output of the model, split by spaces.
+        `targets`: the target output, split by spaces.
+
+        ### Returns
+        ----------
+        The extracted and formatted solutions.
+
+        ### Raises
+        ----------
+        `ValueError`: if `outputs` and `targets` are not of the same length.
+        """
+
+        ...
+
+    @classmethod
+    @overload
+    def extract_solution(cls, output: str, target: str) -> str:
         """
         Extracts the attempted solution from the output and formats it into the `target` format.
         If no approprate solution is found, an empty string is returned.
@@ -264,18 +309,20 @@ class Benchmark(ABC, Dataset):
         ### Returns
         ----------
         The extracted and formatted solution.
-        - If `output` is a list of strings, the return value is a list of strings.
-
-        ### Raises
-        ----------
-        `ValueError`: if `outputs` and `targets` are not of the same length.
         """
 
-        assert len(outputs) == len(
-            targets
+        ...
+
+    @classmethod
+    def extract_solution(cls, output, target) -> str | list[str]:
+        if isinstance(output, str):
+            return cls._extract_solution_impl(output, target)
+
+        assert len(output) == len(
+            target
         ), "the number of outputs and targets must be the same."
 
-        return [cls._extract_solution_impl(o, t) for o, t in zip(outputs, targets)]
+        return [cls._extract_solution_impl(o, t) for o, t in zip(output, target)]
 
     @classmethod
     @abstractmethod
@@ -293,4 +340,4 @@ class Benchmark(ABC, Dataset):
         The extracted and formatted solution.
         """
 
-        raise NotImplementedError
+        ...
