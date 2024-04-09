@@ -82,7 +82,7 @@ class ListReversal(Benchmark):
         if sample is None:
             sample = self.test_set
 
-        instructions = "The task is to reverse the order of the items in a list. The list is [{}]. The output must be the reversed list."
+        instructions = "Reverse the order of the items in the following list: [{}]."
 
         if isinstance(sample, str):
             return instructions.format(", ".join(sample.split(" ")))
@@ -146,11 +146,13 @@ class ListReversal(Benchmark):
         The evaluation score.
         """
 
-        return np.mean(
-            [
-                0.0 if i >= len(target) else float(output[i] == target[i])
-                for i in range(len(output))
-            ]
+        return float(
+            np.mean(
+                [
+                    0.0 if i >= len(target) else float(output[i] == target[i])
+                    for i in range(len(output))
+                ]
+            )
         )
 
     @classmethod
@@ -174,12 +176,14 @@ class ListReversal(Benchmark):
         output_list = output.split(" ")
         target_list = target.split(" ")
 
-        return np.mean(
-            [
-                eval_fn(output_list[i], target_list[i])
-                for i in range(min(len(output_list), len(target_list)))
-            ]
-            + [0.0] * abs(len(output_list) - len(target_list))
+        return float(
+            np.mean(
+                [
+                    eval_fn(output_list[i], target_list[i])
+                    for i in range(min(len(output_list), len(target_list)))
+                ]
+                + [0.0] * abs(len(output_list) - len(target_list))
+            )
         )
 
     @classmethod

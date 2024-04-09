@@ -91,7 +91,7 @@ class LetterConcatenation(Benchmark):
         if sample is None:
             sample = self.test_set
 
-        instructions = "The task is to concatenate the character with index {} of each input word, where the input words are [{}]. Indices start at zero. The output must be a single word."
+        instructions = "Concatenate the characters with index {} of each word in the following list: [{}]. Indices start at zero."
 
         if isinstance(sample, str):
             return instructions.format(self._config.i, ", ".join(sample.split(" ")))
@@ -142,30 +142,38 @@ class LetterConcatenation(Benchmark):
             return float(output == target)
 
         # EvaluationMethod.CHARACTER
-        return np.mean(
-            [
-                float(output[i] == target[i])
-                for i in range(min(len(output), len(target)))
-            ]
-            + [0.0] * abs(len(output) - len(target))
+        return float(
+            np.mean(
+                [
+                    float(output[i] == target[i])
+                    for i in range(min(len(output), len(target)))
+                ]
+                + [0.0] * abs(len(output) - len(target))
+            )
         )
 
     @classmethod
-    def extract_letter_idx(cls, sample: str) -> int:
+    def extract_letter_idx(cls, instructed_sample: str) -> int:
         """
         Extract the index of the character to concatenate from an instructed input sample.
 
         ### Parameters
         ----------
-        `sample`: the instructed input sample.
+        `instructed_sample`: the instructed input sample.
 
         ### Returns
         ----------
         The index of the character to concatenate.
+
+        ### Raises
+        ----------
+        `ValueError`: if the input sample does not follow the instructed format of this benchmark.
         """
 
         try:
-            letter_ixd = int(sample.split(" ")[9])
+            words = instructed_sample.split(" ")
+            idx = words.index("index")
+            return int(words[idx + 1])
         except Exception:
             raise ValueError(
                 "The input sample does not follow the instructed format of this benchmark."
