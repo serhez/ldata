@@ -139,7 +139,7 @@ class Benchmark(ABC, Dataset):
         evaluation_method: EvaluationMethod = EvaluationMethod.EXACT,
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
         instructed: bool = True,
-    ) -> tuple[float, npt.NDArray[np.float64], list[str]]:
+    ) -> tuple[float, npt.NDArray[np.float64], list[str], list[str]]:
         """
         Evaluate a subject on the benchmark.
 
@@ -154,7 +154,7 @@ class Benchmark(ABC, Dataset):
 
         ### Returns
         ----------
-        A tuple of the aggregated score of the outputs, the list of scores of the individual outputs and the list of extracted solutions from the individual outputs.
+        A tuple containing the aggregated score, the list of scores, the list of raw outputs and the list of extracted solutions (via `extract_solution`).
 
         ### Raises
         ----------
@@ -219,7 +219,7 @@ class Benchmark(ABC, Dataset):
                 f"aggregation method '{aggregation_method}' is not supported."
             )
 
-        return agg_score, scores, found_solutions
+        return agg_score, scores, outputs, found_solutions
 
     def _call_impl(self, *args, **kwargs):
         return self.evaluate_subject(*args, **kwargs)
