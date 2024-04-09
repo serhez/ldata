@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from dataclasses import MISSING, dataclass
+from dataclasses import dataclass
 from os import path
 from typing import Any, Generic, Iterable, Type, TypeVar
 
@@ -24,10 +24,10 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
     class Config:
         """The configuration of a dataset."""
 
-        name: str = MISSING
+        name: str
         """The name of the dataset used for reporting."""
 
-        data_path: str = MISSING
+        data_path: str
         """The path to the `CSV` file containing the data."""
 
         test_percentage: float = 0.2

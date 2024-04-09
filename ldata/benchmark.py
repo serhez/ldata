@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import MISSING, dataclass
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable
 
@@ -15,7 +15,7 @@ class Benchmark(ABC, Dataset):
     class Config(Dataset.Config):
         """The configuration of a benchmark."""
 
-        name: str = MISSING
+        name: str
         """The name of the benchmark used for reporting."""
 
     class AggregationMethod(Enum):
@@ -205,7 +205,7 @@ class Benchmark(ABC, Dataset):
         A tuple containing the found solution (via `extract_solution`) and the score of the solution.
         """
 
-        found_solution = cls.extract_solution(output, target)
+        found_solution = cls.extract_solution([output], [target])[0]
         score = cls._evaluate_output_impl(found_solution, target, evaluation_method)
 
         return found_solution, score
@@ -236,12 +236,12 @@ class Benchmark(ABC, Dataset):
     @abstractmethod
     def compute_target(cls, input: str, **kwargs: Any) -> str:
         """
-        Compute the target output for the input.
+        Compute the target output for the uninstructed input.
+        If the input is instructed, you must use `get_uninstructed` before passing it to this function.
 
         ### Parameters
         ----------
-        `input`: the input string.
-        `instructed`: whether the input is instructed or raw.
+        `input`: the uninstructed input string.
 
         ### Returns
         ----------
@@ -251,9 +251,7 @@ class Benchmark(ABC, Dataset):
         raise NotImplementedError
 
     @classmethod
-    def extract_solution(
-        cls, outputs: str | list[str], targets: str | list[str]
-    ) -> str | list[str]:
+    def extract_solution(cls, outputs: list[str], targets: list[str]) -> list[str]:
         """
         Extracts the attempted solution from the output and formats it into the `target` format.
         If no approprate solution is found, an empty string is returned.
@@ -270,17 +268,14 @@ class Benchmark(ABC, Dataset):
 
         ### Raises
         ----------
-        `ValueError`: if `outputs` and `targets` are not of the same type (either both lists or strings).
+        `ValueError`: if `outputs` and `targets` are not of the same length.
         """
 
-        if isinstance(outputs, list) and isinstance(targets, list):
-            return [cls._extract_solution_impl(o, t) for o, t in zip(outputs, targets)]
-        elif isinstance(outputs, str) and isinstance(targets, str):
-            return cls._extract_solution_impl(outputs, targets)
-        else:
-            raise ValueError(
-                f"`outputs` and `targets` must be either both lists of strings or both strings, not {type(outputs)} and {type(targets)}."
-            )
+        assert len(outputs) == len(
+            targets
+        ), "the number of outputs and targets must be the same."
+
+        return [cls._extract_solution_impl(o, t) for o, t in zip(outputs, targets)]
 
     @classmethod
     @abstractmethod

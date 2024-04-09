@@ -1,6 +1,6 @@
 import random
 import re
-from dataclasses import MISSING, dataclass
+from dataclasses import dataclass
 
 import numpy as np
 import requests
@@ -25,7 +25,7 @@ class LetterConcatenation(Benchmark):
         name: str = "LetterConcatenation"
         """The name of the benchmark."""
 
-        letter_idx: int = MISSING
+        letter_idx: int
         """The character's index of the words to concatenate."""
 
     def __init__(self, config: Config):
