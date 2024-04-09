@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass
 from os import path
-from typing import Any, Generic, Iterable, Type, TypeVar, overload
+from typing import Any, Generic, Iterator, Type, TypeVar, overload
 
 import numpy as np
 import numpy.typing as npt
@@ -100,18 +100,17 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
                 return (self._inputs[idx], self._targets[idx])
             return Dataset.Split(self._inputs[idx], self._targets[idx])
 
-        def __iter__(self) -> Iterable[tuple[_InputDType, _TargetDType]]:
-            return zip(self._inputs, self._targets)
+        def __iter__(self) -> Iterator[tuple[_InputDType, _TargetDType]]:
+            return iter(zip(self._inputs, self._targets))
 
-        def sample(
-            self, n: int = 1, replace: bool = False
-        ) -> tuple[_InputDType, _TargetDType] | Dataset.Split:
+        def sample(self, n: int = 1, replace: bool = False) -> Dataset.Split:
             """
             Get a random sample of the split.
 
             ### Parameters
             ----------
             `n`: the number of samples to get.
+            `replace`: whether to sample with replacement.
 
             ### Returns
             ----------
@@ -119,7 +118,12 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
             """
 
             idxs = np.random.choice(len(self), n, replace=replace)
-            return self[idxs]
+            sample = self[idxs]
+
+            if isinstance(sample, Dataset.Split):
+                return sample
+
+            return Dataset.Split(np.array([sample[0]]), np.array([sample[1]]))
 
     def __init__(
         self,

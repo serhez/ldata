@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Any, Callable, overload
 
 import numpy as np
+import numpy.typing as npt
 
 from ldata.dataset import Dataset
 
@@ -133,18 +134,14 @@ class Benchmark(ABC, Dataset):
 
     def evaluate_subject(
         self,
-        subject: Callable[[list[str], list[tuple[str, str]]], list[str]],
+        subject: Callable[[list[Any], list[tuple[Any, Any]]], list[Any]],
         n_samples: int | None = None,
-        evaluation_method: EvaluationMethod = EvaluationMethod.CHARACTER,
+        evaluation_method: EvaluationMethod = EvaluationMethod.EXACT,
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
         instructed: bool = True,
-    ) -> float:
+    ) -> tuple[float, npt.NDArray[np.float64], list[str]]:
         """
-        Evaluate the subjects on the benchmark.
-        The evaluation metric and the the possible range of score values should be available in the benchmark's documentation.
-        The inputs and targets are taken from the whole test set.
-        Examples (i.e., shots) will be provided to the subjects to allow for in-context learning; the number of shots is determined by `Benchmark.Config.n_shots`.
-        `extract_solution` is used internally to extract the solution from the output and format it into the `target` format, hence you don't need to perform this step before calling this function.
+        Evaluate a subject on the benchmark.
 
         ### Parameters
         ----------
@@ -157,7 +154,21 @@ class Benchmark(ABC, Dataset):
 
         ### Returns
         ----------
-        The aggregated score of the outputs.
+        A tuple of the aggregated score of the outputs, the list of scores of the individual outputs and the list of extracted solutions from the individual outputs.
+
+        ### Raises
+        ----------
+        `ValueError`: if `aggregation_method` is not supported.
+        `AssertionError`: if `n_samples` is not `None` and is less than 1, or greater than the number of samples in the test set.
+        `AssertionError`: if the number of inputs and targets is not the same.
+        `AssertionError`: if the number of output strings returned by the subject is not the same as the number of input strings.
+
+        ### Notes
+        ----------
+        - The evaluation metric and the the possible range of score values should be available in the benchmark's documentation.
+        - The inputs and targets are taken from the whole test set.
+        - Examples (i.e., shots) will be provided to the subjects to allow for in-context learning; the number of shots is determined by `Benchmark.Config.n_shots`.
+        - `extract_solution` is used internally to extract the solution from the output and format it into the `target` format, hence you don't need to perform this step before calling this function.
         """
 
         if instructed:
@@ -167,8 +178,11 @@ class Benchmark(ABC, Dataset):
             test_set = self.test_set
             shots = self.shots
 
+        assert (
+            n_samples is None or len(test_set) >= n_samples >= 1
+        ), "n_samples must be >= 1 and <= len(test_set)."
+
         if n_samples is not None:
-            # choose a random subset of the test set
             test_set = test_set.sample(n_samples)
 
         inputs = test_set.inputs
@@ -177,30 +191,35 @@ class Benchmark(ABC, Dataset):
             targets
         ), "the number of inputs and targets must be the same."
 
-        outputs = subject(inputs, shots)
+        outputs = subject(list(inputs), list(shots))
         assert (
             len(outputs) == len(inputs)
         ), "the number of output strings returned by the subject must be the same as the number of input strings."
 
-        scores = [
-            self.evaluate_output(o, t, evaluation_method)[1]
-            for o, t in zip(outputs, targets)
-        ]
+        scores, found_solutions = zip(
+            *[
+                self.evaluate_output(o, t, evaluation_method)
+                for o, t in zip(outputs, targets)
+            ]
+        )
+        scores = np.array(scores)
 
         if aggregation_method == self.AggregationMethod.MEAN:
-            return float(np.mean(scores))
+            agg_score = float(np.mean(scores))
         elif aggregation_method == self.AggregationMethod.MEDIAN:
-            return float(np.median(scores))
+            agg_score = float(np.median(scores))
         elif aggregation_method == self.AggregationMethod.MAX:
-            return np.max(scores)
+            agg_score = np.max(scores)
         elif aggregation_method == self.AggregationMethod.MIN:
-            return np.min(scores)
+            agg_score = np.min(scores)
         elif aggregation_method == self.AggregationMethod.SUM:
-            return np.sum(scores)
+            agg_score = np.sum(scores)
         else:
             raise ValueError(
                 f"aggregation method '{aggregation_method}' is not supported."
             )
+
+        return agg_score, scores, found_solutions
 
     def _call_impl(self, *args, **kwargs):
         return self.evaluate_subject(*args, **kwargs)
@@ -210,10 +229,9 @@ class Benchmark(ABC, Dataset):
     @classmethod
     def evaluate_output(
         cls, output: str, target: str, evaluation_method: EvaluationMethod
-    ) -> tuple[str, float]:
+    ) -> tuple[float, str]:
         """
-        The benchmark's internal implementation of `evaluate` acting on a single (input, output) pair; do not call this method directly.
-        It is recommended for the scores to be in the range of [0.0, 1.0] and to increase linearly with the quality of the results.
+        Evaluate a single (input, output) pair.
 
         ### Parameters
         ----------
@@ -229,7 +247,7 @@ class Benchmark(ABC, Dataset):
         found_solution = cls.extract_solution([output], [target])[0]
         score = cls._evaluate_output_impl(found_solution, target, evaluation_method)
 
-        return found_solution, score
+        return score, found_solution
 
     @classmethod
     @abstractmethod
@@ -239,6 +257,7 @@ class Benchmark(ABC, Dataset):
         """
         The child class' internal implementation of `evaluate_output`.
         It can be assumed that `output` is an extracted solution via `extract_solution`, i.e., it follows the format of the `target`.
+        It is recommended for the scores to be in the range of [0.0, 1.0] and to increase linearly with the quality of the results.
 
         ### Parameters
         ----------
