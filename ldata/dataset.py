@@ -93,7 +93,9 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
         def __getitem__(self, idx: int) -> tuple[_InputDType, _TargetDType]: ...
 
         @overload
-        def __getitem__(self, idx: npt.NDArray[np.int32]) -> Dataset.Split: ...
+        def __getitem__(
+            self, idx: list[int] | npt.NDArray[np.int_] | slice
+        ) -> Dataset.Split: ...
 
         def __getitem__(self, idx):
             if isinstance(idx, int):
@@ -283,11 +285,11 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
     def __getitem__(self, idx: int) -> tuple[_InputDType, _TargetDType]: ...
 
     @overload
-    def __getitem__(self, idx: npt.NDArray[np.int32]) -> Dataset.Split: ...
-
     def __getitem__(
-        self, idx: int | npt.NDArray[np.int32]
-    ) -> tuple[_InputDType, _TargetDType] | Dataset.Split:
+        self, idx: list[int] | npt.NDArray[np.int_] | slice
+    ) -> Dataset.Split: ...
+
+    def __getitem__(self, idx) -> tuple[_InputDType, _TargetDType] | Dataset.Split:
         return self.full_set[idx]
 
     def __iter__(self) -> Dataset.Split:

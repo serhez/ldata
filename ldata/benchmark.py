@@ -150,7 +150,8 @@ class Benchmark(ABC, Dataset):
         `n_samples`: the number of samples to evaluate the subject on.
         - If `None` (default), the whole test set is used.
         `custom_shots`: custom shots to be used for in-context learning, as a list of (input, target) pairs.
-        - If `None` (default), the dataset's shots are used.
+        - Only the first `n_shots` pairs will be used.
+        - If `None` (default), `n_shots` of the dataset's shots are used.
         `evaluation_method`: the level of exactness measured by the evaluation metric.
         `aggregation_method`: the method to aggregate the scores of the (input, output) pairs.
         `instructed`: whether to use the instructed test set (as given by `get_instructed`) or the regular test set; also applied to the shots (but not to the `custom_shots`, if any).
@@ -179,14 +180,18 @@ class Benchmark(ABC, Dataset):
             shots = (
                 self.get_instructed(self.shots)
                 if custom_shots is None
-                else Dataset.Split(*[np.ndarray(x) for x in zip(*custom_shots)])
+                else Dataset.Split(*[np.ndarray(x) for x in zip(*custom_shots)])[
+                    : self._config.n_shots
+                ]
             )
         else:
             test_set = self.test_set
             shots = (
                 self.shots
                 if custom_shots is None
-                else Dataset.Split(*[np.ndarray(x) for x in zip(*custom_shots)])
+                else Dataset.Split(*[np.ndarray(x) for x in zip(*custom_shots)])[
+                    : self._config.n_shots
+                ]
             )
 
         assert (
