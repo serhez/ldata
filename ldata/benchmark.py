@@ -136,7 +136,7 @@ class Benchmark(ABC, Dataset):
         self,
         subject: Callable[[list[Any], list[tuple[Any, Any]]], list[Any]],
         n_samples: int | None = None,
-        custom_shots: list[tuple[str, str]] | None = None,
+        custom_shots: Dataset.Split | list[tuple[str, str]] | None = None,
         evaluation_method: EvaluationMethod = EvaluationMethod.EXACT,
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
         instructed: bool = True,
@@ -180,19 +180,17 @@ class Benchmark(ABC, Dataset):
             shots = (
                 self.get_instructed(self.shots)
                 if custom_shots is None
-                else Dataset.Split(*[np.ndarray(x) for x in zip(*custom_shots)])[
-                    : self._config.n_shots
-                ]
+                else custom_shots[: self._config.n_shots]
             )
         else:
             test_set = self.test_set
             shots = (
                 self.shots
                 if custom_shots is None
-                else Dataset.Split(*[np.ndarray(x) for x in zip(*custom_shots)])[
-                    : self._config.n_shots
-                ]
+                else custom_shots[: self._config.n_shots]
             )
+        if not isinstance(shots, Dataset.Split):
+            shots = Dataset.Split(shots)
 
         assert (
             n_samples is None or len(test_set) >= n_samples >= 1

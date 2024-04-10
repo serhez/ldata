@@ -3,22 +3,17 @@ from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass
 from os import path
-from typing import Any, Generic, Iterator, Type, TypeVar, overload
+from typing import Any, Iterator, Sequence, Type, overload
 
 import numpy as np
 import numpy.typing as npt
-
-# from torch.utils.data import Dataset as TorchDataset
-
-_InputDType = TypeVar("_InputDType")
-_TargetDType = TypeVar("_TargetDType")
+from torch.utils.data import Dataset as TorchDataset
 
 
 # TODO: Allow the data file path to be in a remote server (e.g., a URL)
 # TODO: Implement chaching the dataset into a file if coming from a remote server
 # TODO: Implement paging to avoid loading the entire dataset into memory
-# FIX: The `Split` class should be a subclass of `TorchDataset` to be able to use PyTorch's `DataLoader` class
-class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
+class Dataset(TorchDataset):
     """A dataset which can be split into training and test sets."""
 
     @dataclass(kw_only=True)
@@ -49,10 +44,11 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
     class Split:
         """A split of the dataset, which contains input and target data."""
 
+        @overload
         def __init__(
             self,
-            inputs: npt.NDArray[_InputDType],
-            targets: npt.NDArray[_TargetDType],
+            inputs: Sequence[Any] | npt.NDArray[Any],
+            targets: Sequence[Any] | npt.NDArray[Any],
         ):
             """
             Initialize the dataset split.
@@ -67,6 +63,39 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
             `AssertionError`: if the inputs and targets lists have different lengths.
             """
 
+            ...
+
+        @overload
+        def __init__(
+            self,
+            data: Sequence[tuple[Any, Any]],
+        ):
+            """
+            Initialize the dataset split.
+
+            ### Parameters
+            ----------
+            `data`: the (input, target) data pairs.
+
+            ### Raises
+            ----------
+            `AssertionError`: if the inputs and targets lists have different lengths.
+            """
+
+            ...
+
+        def __init__(self, *args, **_):
+            if len(args) == 1:
+                data = args[0]
+                inputs, targets = zip(*data)
+            else:
+                inputs, targets = args
+
+            if isinstance(inputs, list):
+                inputs = np.array(inputs)
+            if isinstance(targets, list):
+                targets = np.array(targets)
+
             assert len(inputs) == len(
                 targets
             ), "inputs and targets lists must have the same length."
@@ -75,22 +104,28 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
             self._targets = targets
 
         @property
-        def inputs(self) -> npt.NDArray[_InputDType]:
+        def inputs(self) -> npt.NDArray[Any]:
             """The input data."""
 
             return self._inputs
 
         @property
-        def targets(self) -> npt.NDArray[_TargetDType]:
+        def targets(self) -> npt.NDArray[Any]:
             """The target data."""
 
             return self._targets
+
+        @property
+        def raw(self) -> list[tuple[Any, Any]]:
+            """The raw (input, target) data pairs."""
+
+            return list(zip(self._inputs, self._targets))
 
         def __len__(self) -> int:
             return len(self._inputs)
 
         @overload
-        def __getitem__(self, idx: int) -> tuple[_InputDType, _TargetDType]: ...
+        def __getitem__(self, idx: int) -> tuple[Any, Any]: ...
 
         @overload
         def __getitem__(
@@ -102,7 +137,7 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
                 return (self._inputs[idx], self._targets[idx])
             return Dataset.Split(self._inputs[idx], self._targets[idx])
 
-        def __iter__(self) -> Iterator[tuple[_InputDType, _TargetDType]]:
+        def __iter__(self) -> Iterator[tuple[Any, Any]]:
             return iter(zip(self._inputs, self._targets))
 
         def sample(self, n: int = 1, replace: bool = False) -> Dataset.Split:
@@ -130,8 +165,8 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
     def __init__(
         self,
         config: Config,
-        input_dtype: Type[_InputDType] = str,
-        target_dtype: Type[_TargetDType] = str,
+        input_dtype: Type[Any] = str,
+        target_dtype: Type[Any] = str,
         transform: Any = None,
         target_transform: Any = None,
     ):
@@ -282,14 +317,14 @@ class Dataset(Generic[_InputDType, _TargetDType]):  # , TorchDataset):
         return self.train_len + self.test_len
 
     @overload
-    def __getitem__(self, idx: int) -> tuple[_InputDType, _TargetDType]: ...
+    def __getitem__(self, idx: int) -> tuple[Any, Any]: ...
 
     @overload
     def __getitem__(
         self, idx: list[int] | npt.NDArray[np.int_] | slice
     ) -> Dataset.Split: ...
 
-    def __getitem__(self, idx) -> tuple[_InputDType, _TargetDType] | Dataset.Split:
+    def __getitem__(self, idx) -> tuple[Any, Any] | Dataset.Split:
         return self.full_set[idx]
 
     def __iter__(self) -> Dataset.Split:
