@@ -69,7 +69,7 @@ class LetterConcatenation(Benchmark):
             if len(word) > letter_idx and all(char.isalpha() for char in word)
         ]
 
-        # Create N_SAMPLES lists of N_WORDS words chosen randomly from the list
+        # Create n_samples lists of n_words words chosen randomly from the list
         samples = [
             " ".join(random.choices(all_words, k=n_words))
             for _ in range(int(n_samples))
@@ -108,8 +108,6 @@ class LetterConcatenation(Benchmark):
     def get_uninstructed(
         self, sample: str | Dataset.Split | None = None
     ) -> str | Dataset.Split:
-        super().get_uninstructed(sample)
-
         if sample is None:
             sample = self.test_set
 

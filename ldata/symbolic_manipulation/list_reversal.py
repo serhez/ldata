@@ -62,7 +62,7 @@ class ListReversal(Benchmark):
         all_words = [word.decode("utf-8") for word in all_words]
         all_words = [word for word in all_words if all(char.isalpha() for char in word)]
 
-        # Create N_SAMPLES lists of N_WORDS words chosen randomly from the list
+        # Create n_samples lists of n_words words chosen randomly from the list
         samples = [
             " ".join(random.choices(all_words, k=n_words))
             for _ in range(int(n_samples))
@@ -80,8 +80,6 @@ class ListReversal(Benchmark):
     def get_instructed(
         self, sample: str | Dataset.Split | None = None
     ) -> str | Dataset.Split:
-        super().get_instructed(sample)
-
         if sample is None:
             sample = self.test_set
 
