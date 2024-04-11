@@ -134,9 +134,8 @@ class Benchmark(ABC, Dataset):
 
     def evaluate_subject(
         self,
-        subject: Callable[[list[Any], list[tuple[Any, Any]]], list[Any]],
+        subject: Callable[[list[Any]], list[Any]],
         n_samples: int | None = None,
-        custom_shots: Dataset.Split | list[tuple[str, str]] | None = None,
         evaluation_method: EvaluationMethod = EvaluationMethod.EXACT,
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
         instructed: bool = True,
@@ -149,12 +148,9 @@ class Benchmark(ABC, Dataset):
         `subject`: the subject to evaluate, which must be a function that takes an array of input strings and returns an array of output strings.
         `n_samples`: the number of samples to evaluate the subject on.
         - If `None` (default), the whole test set is used.
-        `custom_shots`: custom shots to be used for in-context learning, as a list of (input, target) pairs.
-        - Only the first `n_shots` pairs will be used.
-        - If `None` (default), `n_shots` of the dataset's shots are used.
         `evaluation_method`: the level of exactness measured by the evaluation metric.
         `aggregation_method`: the method to aggregate the scores of the (input, output) pairs.
-        `instructed`: whether to use the instructed test set (as given by `get_instructed`) or the regular test set; also applied to the shots (but not to the `custom_shots`, if any).
+        `instructed`: whether to use the instructed test set (as given by `get_instructed`) or the regular test set.
 
         ### Returns
         ----------
@@ -171,26 +167,13 @@ class Benchmark(ABC, Dataset):
         ----------
         - The evaluation metric and the the possible range of score values should be available in the benchmark's documentation.
         - The inputs and targets are taken from the whole test set.
-        - Examples (i.e., shots) will be provided to the subjects to allow for in-context learning; the number of shots is determined by `Benchmark.Config.n_shots`.
         - `extract_solution` is used internally to extract the solution from the output and format it into the `target` format, hence you don't need to perform this step before calling this function.
         """
 
         if instructed:
             test_set = self.get_instructed()
-            shots = (
-                self.get_instructed(self.shots)
-                if custom_shots is None
-                else custom_shots[: self._config.n_shots]
-            )
         else:
             test_set = self.test_set
-            shots = (
-                self.shots
-                if custom_shots is None
-                else custom_shots[: self._config.n_shots]
-            )
-        if not isinstance(shots, Dataset.Split):
-            shots = Dataset.Split(shots)
 
         assert (
             n_samples is None or len(test_set) >= n_samples >= 1
@@ -205,7 +188,7 @@ class Benchmark(ABC, Dataset):
             targets
         ), "the number of inputs and targets must be the same."
 
-        outputs = subject(list(inputs), list(shots))
+        outputs = subject(list(inputs))
         assert (
             len(outputs) == len(inputs)
         ), "the number of output strings returned by the subject must be the same as the number of input strings."
