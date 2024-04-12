@@ -42,7 +42,7 @@ class LetterConcatenation(Benchmark):
 
     @classmethod
     def compute_target(cls, input: str, letter_idx: int) -> str:
-        return "".join([word[letter_idx] for word in input.split(" ")])
+        return " ".join([word[letter_idx] for word in input.split(" ")])
 
     @classmethod
     def build(cls, path: str, n_samples: int, n_words: int, letter_idx: int):
@@ -134,6 +134,9 @@ class LetterConcatenation(Benchmark):
         target: str,
         evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
     ) -> float:
+        output = output.replace(" ", "")
+        target = target.replace(" ", "")
+
         if (
             evaluation_method == Benchmark.EvaluationMethod.EXACT
             or evaluation_method == Benchmark.EvaluationMethod.WORD
@@ -177,8 +180,6 @@ class LetterConcatenation(Benchmark):
             raise ValueError(
                 "The input sample does not follow the instructed format of this benchmark."
             )
-
-        return letter_ixd
 
     @classmethod
     def _extract_solution_impl(cls, output: str, target: str) -> str:
