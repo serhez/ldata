@@ -33,7 +33,7 @@ def get_common_names() -> list[str]:
     soup = BeautifulSoup(response.text, "html.parser")
     names.extend([a.text for a in soup.select("a[href^='surnames/']")])
 
-    # Remove multi-word names and non-alphabetic characters
+    # Remove unwanted words
     sep_chars = [" ", "-", "'"]
     names = [
         name
