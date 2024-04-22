@@ -3,10 +3,10 @@ import re
 from dataclasses import dataclass
 
 import numpy as np
-import requests
 
 from ldata.benchmark import Benchmark
 from ldata.dataset import Dataset
+from ldata.utils import get_common_names
 
 
 class ListReversal(Benchmark):
@@ -54,13 +54,9 @@ class ListReversal(Benchmark):
         `n_samples`: the number of samples to generate.
         `n_words`: the number of words in each sample.
         """
-        # Create a list of words
-        response = requests.get("https://www.mit.edu/~ecprice/wordlist.10000")
-        all_words = response.content.splitlines()
 
-        # Remove spaces from the words
-        all_words = [word.decode("utf-8") for word in all_words]
-        all_words = [word for word in all_words if all(char.isalpha() for char in word)]
+        # Create a list of words
+        all_words = get_common_names()
 
         # Create n_samples lists of n_words words chosen randomly from the list
         samples = [
