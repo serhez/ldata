@@ -17,7 +17,7 @@ class LetterConcatenation(Benchmark):
     """
 
     _ALPHANUM_PATTERN = re.compile("[\W_]+")
-    _INSTRUCTIONS_TEMPLATE = "Concatenate the characters with index {} of each word in the following list: [{}]. Indices start at zero."
+    _INSTRUCTIONS_TEMPLATE = "Concatenate the characters at index {} of each word in the list [{}], in the same order they appear in the list. Indices start at zero."
 
     @dataclass(kw_only=True)
     class Config(Benchmark.Config):
