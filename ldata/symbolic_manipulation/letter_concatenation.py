@@ -48,6 +48,7 @@ class LetterConcatenation(Benchmark):
     def build(cls, path: str, n_samples: int, n_words: int, letter_idx: int):
         """
         Build the letter concatenation dataset.
+        Requires internet connection.
 
         ### Parameters
         ----------
@@ -55,6 +56,10 @@ class LetterConcatenation(Benchmark):
         `n_samples`: the number of samples to generate.
         `n_words`: the number of words in each sample.
         `letter_idx`: the index of the character to concatenate.
+
+        ### Raises
+        ----------
+        `ConnectionError`: if the internet connection is not available.
         """
 
         # Create a list of words

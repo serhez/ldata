@@ -47,12 +47,17 @@ class ListReversal(Benchmark):
     def build(cls, path: str, n_samples: int, n_words: int):
         """
         Build the list reversal benchmark.
+        Requires internet connection.
 
         ### Parameters
         ----------
         `path`: the path to save the dataset.
         `n_samples`: the number of samples to generate.
         `n_words`: the number of words in each sample.
+
+        ### Raises
+        ----------
+        `ConnectionError`: if the internet connection is not available.
         """
 
         # Create a list of words
