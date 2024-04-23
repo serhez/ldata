@@ -134,18 +134,18 @@ class Benchmark(ABC, Dataset):
 
     def evaluate_subject(
         self,
-        subject: Callable[[list[Any]], list[Any]],
+        subject: Callable[[list[Any]], tuple[list[Any], dict[str, Any]]],
         n_samples: int | None = None,
         evaluation_method: EvaluationMethod = EvaluationMethod.EXACT,
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
         instructed: bool = True,
-    ) -> tuple[float, npt.NDArray[np.float64], list[str], list[str]]:
+    ) -> tuple[float, npt.NDArray[np.float64], list[str], list[str], dict[str, Any]]:
         """
         Evaluate a subject on the benchmark.
 
         ### Parameters
         ----------
-        `subject`: the subject to evaluate, which must be a function that takes an array of input strings and returns an array of output strings.
+        `subject`: the subject to evaluate, which must be a function that takes an array of input strings and returns a tuple containing an array of output strings and a dictionary of usage statistics.
         `n_samples`: the number of samples to evaluate the subject on.
         - If `None` (default), the whole test set is used.
         `evaluation_method`: the level of exactness measured by the evaluation metric.
@@ -154,7 +154,7 @@ class Benchmark(ABC, Dataset):
 
         ### Returns
         ----------
-        A tuple containing the aggregated score, the list of scores, the list of raw outputs and the list of extracted solutions (via `extract_solution`).
+        A tuple containing the aggregated score, the list of scores, the list of raw outputs, the list of extracted solutions (via `extract_solution`) and the aggregate usage statistics of the underlying models.
 
         ### Raises
         ----------
@@ -188,7 +188,7 @@ class Benchmark(ABC, Dataset):
             targets
         ), "the number of inputs and targets must be the same."
 
-        outputs = subject(list(inputs))
+        outputs, stats = subject(list(inputs))
         assert (
             len(outputs) == len(inputs)
         ), "the number of output strings returned by the subject must be the same as the number of input strings."
@@ -216,7 +216,7 @@ class Benchmark(ABC, Dataset):
                 f"aggregation method '{aggregation_method}' is not supported."
             )
 
-        return agg_score, scores, outputs, found_solutions
+        return agg_score, scores, outputs, found_solutions, stats
 
     def _call_impl(self, *args, **kwargs):
         return self.evaluate_subject(*args, **kwargs)
