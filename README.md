@@ -1,6 +1,6 @@
 # LData
 
-A collection of language-based datasets and benchmarks, by Aalto LaReL research group.
+A collection of language-based datasets and benchmarks.
 
 ## Definitions
 
