@@ -1,6 +1,7 @@
 import random
 import re
 from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
 
@@ -44,7 +45,13 @@ class ListReversal(Benchmark):
         return " ".join(input.split(" ")[::-1])
 
     @classmethod
-    def build(cls, path: str, n_samples: int, n_words: int):
+    def build(
+        cls,
+        path: str,
+        n_samples: int,
+        n_words: int,
+        word_source: list[str] | Callable[[], list[str]],
+    ):
         """
         Build the list reversal benchmark.
         Requires internet connection.
@@ -54,14 +61,14 @@ class ListReversal(Benchmark):
         `path`: the path to save the dataset.
         `n_samples`: the number of samples to generate.
         `n_words`: the number of words in each sample.
-
-        ### Raises
-        ----------
-        `ConnectionError`: if the internet connection is not available.
+        `word_source`: a list of words or a function that returns a list of words.
         """
 
         # Create a list of words
-        all_words = get_common_names()
+        if callable(word_source):
+            all_words = word_source()
+        else:
+            all_words = word_source
 
         # Create n_samples lists of n_words words chosen randomly from the list
         samples = [
