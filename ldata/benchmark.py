@@ -19,6 +19,13 @@ class Benchmark(ABC, Dataset):
         name: str
         """The name of the benchmark used for reporting."""
 
+    @property
+    @abstractmethod
+    def config_cls(cls) -> type[Config]:
+        """The configuration class for the Benchmark."""
+
+        ...
+
     class AggregationMethod(Enum):
         """The method to aggregate the scores of the (input, output) pairs."""
 

@@ -29,6 +29,10 @@ class LetterConcatenation(Benchmark):
         letter_idx: int
         """The character's index of the words to concatenate."""
 
+    @property
+    def config_cls(self) -> type[Config]:
+        return LetterConcatenation.Config
+
     def __init__(self, config: Config):
         """
         Initialize the letter concatenation benchmark.

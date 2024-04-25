@@ -41,6 +41,13 @@ class Dataset(TorchDataset):
         chache: bool = False
         """Cache the full dataset into RAM for faster access at the cost of memory."""
 
+    @property
+    @abstractmethod
+    def config_cls(cls) -> type[Config]:
+        """The configuration class for the dataset."""
+
+        ...
+
     class Split:
         """A split of the dataset, which contains input and target data."""
 

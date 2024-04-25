@@ -28,6 +28,10 @@ class ListReversal(Benchmark):
         name: str = "ListReversal"
         """The name of the benchmark."""
 
+    @property
+    def config_cls(self) -> type[Config]:
+        return ListReversal.Config
+
     def __init__(self, config: Config):
         """
         Initialize the letter concatenation benchmark.
