@@ -7,7 +7,6 @@ import numpy as np
 
 from ldata.benchmark import Benchmark
 from ldata.dataset import Dataset
-from ldata.utils import get_common_names
 
 
 class ListReversal(Benchmark):
