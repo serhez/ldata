@@ -326,8 +326,18 @@ class Dataset(TorchDataset):
     def __iter__(self) -> Dataset.Split:
         return self.full_set
 
-    def shuffle(self):
-        """Shuffle the dataset including the training set, testing set and shots."""
+    def shuffle(self, seed: int | None = None):
+        """
+        Shuffle the dataset including the training set, testing set and shots.
+
+        ### Parameters
+        ----------
+        `seed`: the random seed to use for shuffling.
+        - If `None`, the random seed will not be set.
+        """
+
+        if seed is not None:
+            np.random.seed(seed)
 
         self._train_idxs = np.random.choice(
             len(self.full_set),
