@@ -146,6 +146,7 @@ class Benchmark(ABC, Dataset):
         evaluation_method: EvaluationMethod = EvaluationMethod.EXACT,
         aggregation_method: AggregationMethod = AggregationMethod.MEAN,
         instructed: bool = True,
+        shuffle: bool = False,
     ) -> tuple[float, npt.NDArray[np.float64], list[str], list[str], dict[str, Any]]:
         """
         Evaluate a subject on the benchmark.
@@ -173,8 +174,10 @@ class Benchmark(ABC, Dataset):
         ### Notes
         ----------
         - The evaluation metric and the the possible range of score values should be available in the benchmark's documentation.
-        - The inputs and targets are taken from the whole test set. This means that multiple calls to this function with the same `n_samples` will test the given subject on the same samples.
-            - If you want the opposite behavior, you can shuffle the test set before calling this function via the `shuffle` method.
+        - The inputs and targets are taken from the whole test set.
+            - If `shuffle == False`, repeated calls with the same `n_samples` will test the given subject on the same samples (the first `n_samples` of the current test set).
+            - If `shuffle == True`, the test set will be shuffled before selecting the samples, hence the results will be different for each call.
+            - You can also shuffle the test set before calling this function via the `shuffle` method.
         - `extract_solution` is used internally to extract the solution from the output and format it into the `target` format, hence you don't need to perform this step before calling this function.
         """
 
@@ -188,7 +191,10 @@ class Benchmark(ABC, Dataset):
         ), "n_samples must be >= 1 and <= len(test_set)."
 
         if n_samples is not None:
-            test_set = test_set.sample(n_samples)
+            if shuffle:
+                test_set = test_set.sample(n_samples)
+            else:
+                test_set = test_set[:n_samples]
 
         inputs = test_set.inputs
         targets = test_set.targets
