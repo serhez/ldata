@@ -173,7 +173,8 @@ class Benchmark(ABC, Dataset):
         ### Notes
         ----------
         - The evaluation metric and the the possible range of score values should be available in the benchmark's documentation.
-        - The inputs and targets are taken from the whole test set.
+        - The inputs and targets are taken from the whole test set. This means that multiple calls to this function with the same `n_samples` will test the given subject on the same samples.
+            - If you want the opposite behavior, you can shuffle the test set before calling this function via the `shuffle` method.
         - `extract_solution` is used internally to extract the solution from the output and format it into the `target` format, hence you don't need to perform this step before calling this function.
         """
 

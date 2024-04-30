@@ -36,7 +36,7 @@ class Dataset(TorchDataset):
         """
 
         shuffle: bool = False
-        """Whether to shuffle the dataset before splitting it into training and testing sets."""
+        """Whether to shuffle the raw data before splitting it into training and testing sets."""
 
         chache: bool = False
         """Cache the full dataset into RAM for faster access at the cost of memory."""
@@ -207,18 +207,7 @@ class Dataset(TorchDataset):
         self._target_transform = target_transform
 
         if self._config.shuffle:
-            self._train_idxs = np.random.choice(
-                len(self.full_set),
-                int(len(self.full_set) * (1 - self._config.test_percentage)),
-                replace=False,
-            )
-            self._shots_idxs = np.random.choice(
-                self._train_idxs, self._config.n_shots, replace=False
-            )
-            self._train_idxs = np.setdiff1d(self._train_idxs, self._shots_idxs)
-            self._test_idxs = np.setdiff1d(
-                np.arange(len(self.full_set)), self._train_idxs
-            )
+            self.shuffle()
         else:
             self._train_idxs = np.arange(
                 int(len(self.full_set) * (1 - self._config.test_percentage))
@@ -336,6 +325,20 @@ class Dataset(TorchDataset):
 
     def __iter__(self) -> Dataset.Split:
         return self.full_set
+
+    def shuffle(self):
+        """Shuffle the dataset including the training set, testing set and shots."""
+
+        self._train_idxs = np.random.choice(
+            len(self.full_set),
+            int(len(self.full_set) * (1 - self._config.test_percentage)),
+            replace=False,
+        )
+        self._shots_idxs = np.random.choice(
+            self._train_idxs, self._config.n_shots, replace=False
+        )
+        self._train_idxs = np.setdiff1d(self._train_idxs, self._shots_idxs)
+        self._test_idxs = np.setdiff1d(np.arange(len(self.full_set)), self._train_idxs)
 
     @classmethod
     @abstractmethod
