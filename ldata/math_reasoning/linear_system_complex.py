@@ -8,11 +8,11 @@ from ldata.benchmark import Benchmark
 from ldata.dataset import Dataset
 
 
-class LinearSystemMath(Benchmark):
+class LinearSystemComplex(Benchmark):
     """
     Benchmark consisting on solving a single variable given a linear system of equations, expressed in mathematical notation.
     The evaluation metric is the correctness of the numerical solution, up to two decimal places.
-    The score values can be either 0.0 or 1.0, regardless of the `EvaluationMethod`.
+    The score values can be either 0.0 or 1.0, regardless of the `Evaluation`.
     All samples follow the format: "Solve for {variable}, given that {system}.".
     - The variable is a single letter.
     - The system is a list of equations, separated by semicolons. Each equation is in the form $\\sum_{i=1}^{n} a_i x_i = b$, where $a_i$ and $b$ are integers and $n$ is the number of variables. For example: "2x + 3y = 5; 4x = 6".
@@ -21,7 +21,9 @@ class LinearSystemMath(Benchmark):
     All coefficients and constants are integers in the range [-10, 10].
     """
 
-    _INSTRUCTIONS_TEMPLATE = "Solve for {}, given the linear system of equations [{}]."
+    _INSTRUCTIONS_TEMPLATE = (
+        'Solve for "{}", given the system of linear equations [{}].'
+    )
     _LETTERS = "abcdefghijklmnopqrstuvwxyz"
     _NUMBERS = "0123456789"
     _N_RETRIES = int(10e2)
@@ -30,12 +32,12 @@ class LinearSystemMath(Benchmark):
     class Config(Benchmark.Config):
         """The configuration of the linear system of equations benchmark."""
 
-        name: str = "LinearSystemMath"
+        name: str = "LinearSystemComplex"
         """The name of the benchmark."""
 
     @property
     def config_cls(self) -> type[Config]:
-        return LinearSystemMath.Config
+        return LinearSystemComplex.Config
 
     def __init__(self, config: Config):
         """
@@ -254,7 +256,7 @@ class LinearSystemMath(Benchmark):
         """
         Evaluate the output of the model given the target.
         All samples are evaluated based on the correctness of the numerical solution, up to two decimal places.
-        The score values can be either 0.0 or 1.0, regardless of the `EvaluationMethod`.
+        The score values can be either 0.0 or 1.0, regardless of the `Evaluation`.
 
         ### Parameters
         ----------

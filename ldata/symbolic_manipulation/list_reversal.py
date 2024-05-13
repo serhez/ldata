@@ -173,13 +173,13 @@ class ListReversal(Benchmark):
         cls,
         output: str,
         target: str,
-        evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
+        evaluation_method: Benchmark.Evaluation = Benchmark.Evaluation.CHARACTER,
     ) -> float:
-        if evaluation_method == Benchmark.EvaluationMethod.EXACT:
+        if evaluation_method == Benchmark.Evaluation.EXACT:
             return float(output == target)
-        elif evaluation_method == Benchmark.EvaluationMethod.WORD:
+        elif evaluation_method == Benchmark.Evaluation.WORD:
             eval_fn = cls._eval_word
-        elif evaluation_method == Benchmark.EvaluationMethod.CHARACTER:
+        elif evaluation_method == Benchmark.Evaluation.CHARACTER:
             eval_fn = cls._eval_char
         else:
             raise NotImplementedError(
@@ -214,7 +214,7 @@ class ListReversal(Benchmark):
                 current_score = cls._evaluate_output_impl(
                     " ".join(current_match),
                     target,
-                    Benchmark.EvaluationMethod.CHARACTER,
+                    Benchmark.Evaluation.CHARACTER,
                 )
                 if current_score > best_score:
                     best_match = current_match

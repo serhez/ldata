@@ -7,6 +7,7 @@ import numpy as np
 import numpy.typing as npt
 
 from ldata.dataset import Dataset
+from ldata.protocols import Logger
 
 
 class Benchmark(ABC, Dataset):
@@ -26,7 +27,7 @@ class Benchmark(ABC, Dataset):
 
         ...
 
-    class AggregationMethod(Enum):
+    class Aggregation(Enum):
         """The method to aggregate the scores of the (input, output) pairs."""
 
         MEAN = "mean"
@@ -35,7 +36,7 @@ class Benchmark(ABC, Dataset):
         MIN = "min"
         SUM = "sum"
 
-    class EvaluationMethod(Enum):
+    class Evaluation(Enum):
         """The level of exactness measured by the evaluation metric."""
 
         EXACT = "exact"
@@ -143,10 +144,12 @@ class Benchmark(ABC, Dataset):
         self,
         subject: Callable[[list[Any]], tuple[list[Any], dict[str, Any]]],
         n_samples: int | None = None,
-        evaluation_method: EvaluationMethod = EvaluationMethod.EXACT,
-        aggregation_method: AggregationMethod = AggregationMethod.MEAN,
+        evaluation_method: Evaluation = Evaluation.EXACT,
+        aggregation_method: Aggregation = Aggregation.MEAN,
         instructed: bool = True,
         shuffle: bool = False,
+        unsafe: bool = False,
+        logger: Logger | None = None,
     ) -> tuple[float, npt.NDArray[np.float64], list[str], list[str], dict[str, Any]]:
         """
         Evaluate a subject on the benchmark's test set.
@@ -163,6 +166,9 @@ class Benchmark(ABC, Dataset):
         - If `shuffle == False`, repeated calls with the same `n_samples` will test the given subject on the same samples (the first `n_samples` of the current test set).
         - If `shuffle == True`, the test set will be shuffled before selecting the samples, hence the results will be different for each call.
         - You can also shuffle the test set before calling this function via the `shuffle` method.
+        `unsafe`: if `True`, the exceptions raised by the subject will not be caught, which might lead to the function crashing in the middle of the evaluation and all the results being lost.
+        - The advantage of setting `unsafe = True` is that the samples can be passed to the subject in batches, which might be faster depending on the subject's implementation.
+        [optional] `logger`: the logger to use for logging the exceptions raised by the subject.
 
         ### Returns
         ----------
@@ -173,22 +179,50 @@ class Benchmark(ABC, Dataset):
         `ValueError`: if `aggregation_method` is not supported.
         `AssertionError`: if `n_samples` is not `None` and is less than 1, or greater than the number of samples in the test set.
         `AssertionError`: if the number of inputs and targets is not the same.
+        - This will happen if the child class' implementation is incorrect.
         `AssertionError`: if the number of output strings returned by the subject is not the same as the number of input strings.
+        - This can only happen if `unsafe == True`.
 
         ### Notes
         ----------
         - The evaluation metric and the the possible range of score values should be available in the benchmark's documentation.
         - `extract_solution` is used internally to extract the solution from the output and format it into the `target` format, hence you don't need to perform this step before calling this function.
+        - All exceptions raised by the subject are caught, reported by the logger (if provided); the score is set to 0.0, the stats are set to `None` and the output is set to an empty string.
         """
+
+        assert (
+            n_samples is None or self.test_len >= n_samples >= 1
+        ), "n_samples must be >= 1 and <= len(test_set)."
+
+        if aggregation_method == self.Aggregation.MEAN:
+
+            def agg_fn(x):  # type: ignore[reportRedeclaration]
+                return float(np.mean(x))
+        elif aggregation_method == self.Aggregation.MEDIAN:
+
+            def agg_fn(x):  # type: ignore[reportRedeclaration]
+                return float(np.median(x))
+        elif aggregation_method == self.Aggregation.MAX:
+
+            def agg_fn(x):
+                return np.max(x)
+        elif aggregation_method == self.Aggregation.MIN:
+
+            def agg_fn(x):
+                return np.min(x)
+        elif aggregation_method == self.Aggregation.SUM:
+
+            def agg_fn(x):
+                return np.sum(x)
+        else:
+            raise ValueError(
+                f"aggregation method '{aggregation_method}' is not supported."
+            )
 
         if instructed:
             test_set = self.get_instructed()
         else:
             test_set = self.test_set
-
-        assert (
-            n_samples is None or len(test_set) >= n_samples >= 1
-        ), "n_samples must be >= 1 and <= len(test_set)."
 
         if n_samples is not None:
             if shuffle:
@@ -202,7 +236,31 @@ class Benchmark(ABC, Dataset):
             targets
         ), "the number of inputs and targets must be the same."
 
-        outputs, stats = subject(list(inputs))
+        if unsafe:
+            outputs, stats = subject(list(inputs))
+        else:
+            outputs, stats = [], {}
+            for i in range(0, len(inputs), 1):
+                try:
+                    o, s = subject([inputs[i]])
+                    outputs.append(o[0])
+                    for k, v in s.items():
+                        if k not in stats:
+                            stats[k] = []
+                        stats[k].append(v)
+                except Exception as e:
+                    if logger is not None:
+                        logger.error(
+                            {
+                                "Exception raised while evaluating the subject": str(e),
+                                "Input": inputs[i],
+                            }
+                        )
+                    outputs.append("")
+                    for k in stats.keys():
+                        if k not in stats:
+                            stats[k] = []
+                        stats[k].append(None)
         assert (
             len(outputs) == len(inputs)
         ), "the number of output strings returned by the subject must be the same as the number of input strings."
@@ -214,21 +272,7 @@ class Benchmark(ABC, Dataset):
             ]
         )
         scores = np.array(scores)
-
-        if aggregation_method == self.AggregationMethod.MEAN:
-            agg_score = float(np.mean(scores))
-        elif aggregation_method == self.AggregationMethod.MEDIAN:
-            agg_score = float(np.median(scores))
-        elif aggregation_method == self.AggregationMethod.MAX:
-            agg_score = np.max(scores)
-        elif aggregation_method == self.AggregationMethod.MIN:
-            agg_score = np.min(scores)
-        elif aggregation_method == self.AggregationMethod.SUM:
-            agg_score = np.sum(scores)
-        else:
-            raise ValueError(
-                f"aggregation method '{aggregation_method}' is not supported."
-            )
+        agg_score = agg_fn(scores)
 
         return agg_score, scores, outputs, found_solutions, stats
 
@@ -239,7 +283,7 @@ class Benchmark(ABC, Dataset):
 
     @classmethod
     def evaluate_output(
-        cls, output: str, target: str, evaluation_method: EvaluationMethod
+        cls, output: str, target: str, evaluation_method: Evaluation
     ) -> tuple[float, str]:
         """
         Evaluate a single (input, output) pair.
@@ -267,7 +311,7 @@ class Benchmark(ABC, Dataset):
     @classmethod
     @abstractmethod
     def _evaluate_output_impl(
-        cls, output: str, target: str, evaluation_method: EvaluationMethod
+        cls, output: str, target: str, evaluation_method: Evaluation
     ) -> float:
         """
         The child class' internal implementation of `evaluate_output`.

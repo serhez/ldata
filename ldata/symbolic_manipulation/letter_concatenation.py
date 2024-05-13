@@ -139,18 +139,18 @@ class LetterConcatenation(Benchmark):
         cls,
         output: str,
         target: str,
-        evaluation_method: Benchmark.EvaluationMethod = Benchmark.EvaluationMethod.CHARACTER,
+        evaluation_method: Benchmark.Evaluation = Benchmark.Evaluation.CHARACTER,
     ) -> float:
         output = output.replace(" ", "")
         target = target.replace(" ", "")
 
         if (
-            evaluation_method == Benchmark.EvaluationMethod.EXACT
-            or evaluation_method == Benchmark.EvaluationMethod.WORD
+            evaluation_method == Benchmark.Evaluation.EXACT
+            or evaluation_method == Benchmark.Evaluation.WORD
         ):
             return float(output == target)
 
-        # EvaluationMethod.CHARACTER
+        # Evaluation.CHARACTER
         return float(
             np.mean(
                 [
@@ -203,7 +203,7 @@ class LetterConcatenation(Benchmark):
 
                 # Score the concatenated contiguous letters
                 current_score = cls._evaluate_output_impl(
-                    current_match, target, Benchmark.EvaluationMethod.CHARACTER
+                    current_match, target, Benchmark.Evaluation.CHARACTER
                 )
                 if current_score > best_score:
                     best_match = current_match
