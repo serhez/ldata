@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from abc import abstractmethod
 from dataclasses import dataclass
 from os import path
@@ -25,6 +26,9 @@ class Dataset(TorchDataset):
 
         data_path: str
         """The path to the `CSV` file containing the data."""
+
+        seed: int = 42
+        """The random seed to use for all randomization purposes."""
 
         test_percentage: float = 0.2
         """Percentage of the dataset to use for testing."""
@@ -206,6 +210,8 @@ class Dataset(TorchDataset):
         self._transform = transform
         self._target_transform = target_transform
 
+        self.set_seed(config.seed)
+
         if self._config.shuffle:
             self.shuffle()
         else:
@@ -221,6 +227,19 @@ class Dataset(TorchDataset):
 
         if self._config.chache:
             self._full_set = self.full_set
+
+    def set_seed(self, value: int):
+        """
+        Set the random seed for the dataset.
+
+        ### Parameters
+        ----------
+        `value`: the random seed to use.
+        """
+
+        self._config.seed = value
+        np.random.seed(value)
+        random.seed(value)
 
     @property
     def transform(self) -> Any:
