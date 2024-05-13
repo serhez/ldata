@@ -1,3 +1,3 @@
-from .linear_system_math import LinearSystemComplex
+from .linear_system_complex import LinearSystemComplex
 
 __all__ = ["LinearSystemComplex"]
