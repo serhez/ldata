@@ -241,6 +241,10 @@ class Benchmark(ABC, Dataset):
         else:
             outputs, stats = [], {}
             for i in range(0, len(inputs), 1):
+                if logger is not None:
+                    logger.info(
+                        f"[Benchmark.evaluate_subject] Evaluating sample {i + 1}/{len(inputs)}"
+                    )
                 try:
                     o, s = subject([inputs[i]])
                     outputs.append(o[0])
@@ -252,8 +256,11 @@ class Benchmark(ABC, Dataset):
                     if logger is not None:
                         logger.error(
                             {
-                                "Exception raised while evaluating the subject": str(e),
+                                "[Benchmark.evaluate_subject] Exception raised while evaluating the subject": str(
+                                    e
+                                ),
                                 "Input": inputs[i],
+                                "Corrective action": "The stats are set to None and the output is set to an empty string; the score will likely be 0.0.",
                             }
                         )
                     outputs.append("")
