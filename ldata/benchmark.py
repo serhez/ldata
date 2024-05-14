@@ -7,7 +7,7 @@ import numpy as np
 import numpy.typing as npt
 
 from ldata.dataset import Dataset
-from ldata.protocols import Logger
+from ldata.protocols import Addable, Logger
 
 
 class Benchmark(ABC, Dataset):
@@ -142,7 +142,7 @@ class Benchmark(ABC, Dataset):
 
     def evaluate_subject(
         self,
-        subject: Callable[[list[Any]], tuple[list[Any], dict[str, Any]]],
+        subject: Callable[[list[Any]], tuple[list[Any], Addable | None]],
         n_samples: int | None = None,
         evaluation_method: Evaluation = Evaluation.EXACT,
         aggregation_method: Aggregation = Aggregation.MEAN,
@@ -150,13 +150,13 @@ class Benchmark(ABC, Dataset):
         shuffle: bool = False,
         unsafe: bool = False,
         logger: Logger | None = None,
-    ) -> tuple[float, npt.NDArray[np.float64], list[str], list[str], dict[str, Any]]:
+    ) -> tuple[float, npt.NDArray[np.float64], list[str], list[str], Addable | None]:
         """
         Evaluate a subject on the benchmark's test set.
 
         ### Parameters
         ----------
-        `subject`: the subject to evaluate, which must be a function that takes an array of input strings and returns a tuple containing an array of output strings and a dictionary of usage statistics.
+        `subject`: the subject to evaluate, which must be a function that takes an array of input strings and returns a tuple containing an array of output strings and an optional addable object with extra information about the generation process.
         `n_samples`: the number of samples to evaluate the subject on.
         - If `None` (default), the whole test set is used.
         `evaluation_method`: the level of exactness measured by the evaluation metric.
@@ -237,9 +237,9 @@ class Benchmark(ABC, Dataset):
         ), "the number of inputs and targets must be the same."
 
         if unsafe:
-            outputs, stats = subject(list(inputs))
+            outputs, info = subject(list(inputs))
         else:
-            outputs, stats = [], {}
+            outputs, info = [], None
             for i in range(0, len(inputs), 1):
                 if logger is not None:
                     logger.info(
@@ -248,10 +248,10 @@ class Benchmark(ABC, Dataset):
                 try:
                     o, s = subject([inputs[i]])
                     outputs.append(o[0])
-                    for k, v in s.items():
-                        if k not in stats:
-                            stats[k] = []
-                        stats[k].append(v)
+                    if info is None:
+                        info = s
+                    else:
+                        info += s
                 except Exception as e:
                     if logger is not None:
                         logger.error(
@@ -264,10 +264,8 @@ class Benchmark(ABC, Dataset):
                             }
                         )
                     outputs.append("")
-                    for k in stats.keys():
-                        if k not in stats:
-                            stats[k] = []
-                        stats[k].append(None)
+                    if info is not None:
+                        info += None
         assert (
             len(outputs) == len(inputs)
         ), "the number of output strings returned by the subject must be the same as the number of input strings."
@@ -281,7 +279,7 @@ class Benchmark(ABC, Dataset):
         scores = np.array(scores)
         agg_score = agg_fn(scores)
 
-        return agg_score, scores, outputs, found_solutions, stats
+        return agg_score, scores, outputs, found_solutions, info
 
     @classmethod
     def evaluate_output(

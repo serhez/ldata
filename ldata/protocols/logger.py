@@ -8,7 +8,7 @@ class Logger(Protocol):
         self,
         *messages: str | dict[str, Any],
         **kwargs: Any,
-    ) -> None:
+    ):
         """
         Records a log message with the `INFO` level.
 
@@ -23,7 +23,7 @@ class Logger(Protocol):
         self,
         *messages: str | dict[str, Any],
         **kwargs: Any,
-    ) -> None:
+    ):
         """
         Records a log message with the `WARN` level.
 
@@ -38,7 +38,7 @@ class Logger(Protocol):
         self,
         *messages: str | dict[str, Any],
         **kwargs: Any,
-    ) -> None:
+    ):
         """
         Records a log message with the `ERROR` level.
 
@@ -53,7 +53,7 @@ class Logger(Protocol):
         self,
         *messages: str | dict[str, Any],
         **kwargs: Any,
-    ) -> None:
+    ):
         """
         Records a log message with the `DEBUG` level.
 
