@@ -283,11 +283,6 @@ class Benchmark(ABC, Dataset):
 
         return agg_score, scores, outputs, found_solutions, stats
 
-    def _call_impl(self, *args, **kwargs):
-        return self.evaluate_subject(*args, **kwargs)
-
-    __call__: Callable[..., Any] = _call_impl
-
     @classmethod
     def evaluate_output(
         cls, output: str, target: str, evaluation_method: Evaluation
