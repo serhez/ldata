@@ -150,7 +150,15 @@ class Benchmark(ABC, Dataset):
         shuffle: bool = False,
         unsafe: bool = False,
         logger: Logger | None = None,
-    ) -> tuple[float, npt.NDArray[np.float64], list[str], list[str], Addable | None]:
+    ) -> tuple[
+        npt.NDArray[Any],
+        npt.NDArray[Any],
+        list[str],
+        list[str],
+        npt.NDArray[np.float64],
+        float,
+        Addable | None,
+    ]:
         """
         Evaluate a subject on the benchmark's test set.
 
@@ -172,7 +180,14 @@ class Benchmark(ABC, Dataset):
 
         ### Returns
         ----------
-        A tuple containing the aggregated score, the list of scores, the list of raw outputs, the list of extracted solutions (via `extract_solution`) and the aggregate usage statistics of the underlying models.
+        A tuple containing:
+        - The list of inputs.
+        - The list of targets.
+        - The list of raw outputs.
+        - The list of extracted solutions (via `extract_solution`).
+        - The list of scores.
+        - The aggregated score.
+        - The information about the generation process given by the subjects.
 
         ### Raises
         ----------
@@ -279,7 +294,7 @@ class Benchmark(ABC, Dataset):
         scores = np.array(scores)
         agg_score = agg_fn(scores)
 
-        return agg_score, scores, outputs, found_solutions, info
+        return inputs, targets, outputs, found_solutions, scores, agg_score, info
 
     @classmethod
     def evaluate_output(
