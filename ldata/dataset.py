@@ -39,7 +39,7 @@ class Dataset(TorchDataset):
         The training set size will be reduced by `n` in order to create a shots set of size `n`.
         """
 
-        shuffle: bool = False
+        shuffle: bool = True
         """Whether to shuffle the raw data before splitting it into training and testing sets."""
 
         chache: bool = False
