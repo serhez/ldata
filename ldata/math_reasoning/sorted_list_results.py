@@ -218,6 +218,8 @@ class SortedListResults(Benchmark):
                 np.mean(
                     [
                         float(output_list[i] == target_list[i])
+                        if output_list[i] is not None
+                        else 0.0
                         for i in range(min(len(output_list), len(target_list)))
                     ]
                     + [0.0] * abs(len(output_list) - len(target_list))
@@ -243,6 +245,9 @@ class SortedListResults(Benchmark):
         # Replace all separators with spaces
         for sep in [",", ";", ":", "|"]:
             output = output.replace(sep, " ")
+
+        # Remove double spaces
+        output = " ".join(output.split())
 
         # Remove all characters but for digits and spaces
         output = "".join([c for c in output if c.isdigit() or c == " "]).strip()
