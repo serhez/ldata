@@ -8,8 +8,10 @@ import numpy.typing as npt
 
 from ldata.dataset import Dataset
 from ldata.protocols import Addable, Logger
+from ldata.utils import NumberListOperation
 
 
+# TODO: Use different `Evaluation` methods for each benchmark, and expose the enum as with `config_cls`.
 class Benchmark(ABC, Dataset):
     """Abstract class for a benchmark."""
 
@@ -26,15 +28,6 @@ class Benchmark(ABC, Dataset):
         """The configuration class for the Benchmark."""
 
         ...
-
-    class Aggregation(Enum):
-        """The method to aggregate the scores of the (input, output) pairs."""
-
-        MEAN = "mean"
-        MEDIAN = "median"
-        MAX = "max"
-        MIN = "min"
-        SUM = "sum"
 
     class Evaluation(Enum):
         """The level of exactness measured by the evaluation metric."""
@@ -144,8 +137,8 @@ class Benchmark(ABC, Dataset):
         self,
         subject: Callable[[list[Any]], tuple[list[Any], Addable | None]],
         n_samples: int | None = None,
-        evaluation_method: Evaluation = Evaluation.EXACT,
-        aggregation_method: Aggregation = Aggregation.MEAN,
+        evaluation_fn: Evaluation = Evaluation.EXACT,
+        aggregation_fn: NumberListOperation = NumberListOperation.MEAN,
         instructed: bool = True,
         shuffle: bool = False,
         unsafe: bool = False,
@@ -167,8 +160,8 @@ class Benchmark(ABC, Dataset):
         `subject`: the subject to evaluate, which must be a function that takes an array of input strings and returns a tuple containing an array of output strings and an optional addable object with extra information about the generation process.
         `n_samples`: the number of samples to evaluate the subject on.
         - If `None` (default), the whole test set is used.
-        `evaluation_method`: the level of exactness measured by the evaluation metric.
-        `aggregation_method`: the method to aggregate the scores of the (input, output) pairs.
+        `evaluation_fn`: the level of exactness measured by the evaluation metric.
+        `aggregation_fn`: the method to aggregate the scores of the (input, output) pairs.
         `instructed`: whether to use the instructed test set (as given by `get_instructed`) or the regular test set.
         `shuffle`: whether to shuffle the test set before selecting the samples.
         - If `shuffle == False`, repeated calls with the same `n_samples` will test the given subject on the same samples (the first `n_samples` of the current test set).
@@ -191,7 +184,7 @@ class Benchmark(ABC, Dataset):
 
         ### Raises
         ----------
-        `ValueError`: if `aggregation_method` is not supported.
+        `ValueError`: if `aggregation_fn` is not supported.
         `AssertionError`: if `n_samples` is not `None` and is less than 1, or greater than the number of samples in the test set.
         `AssertionError`: if the number of inputs and targets is not the same.
         - This will happen if the child class' implementation is incorrect.
@@ -208,31 +201,6 @@ class Benchmark(ABC, Dataset):
         assert (
             n_samples is None or self.test_len >= n_samples >= 1
         ), "n_samples must be >= 1 and <= len(test_set)."
-
-        if aggregation_method == self.Aggregation.MEAN:
-
-            def agg_fn(x):  # type: ignore[reportRedeclaration]
-                return float(np.mean(x))
-        elif aggregation_method == self.Aggregation.MEDIAN:
-
-            def agg_fn(x):  # type: ignore[reportRedeclaration]
-                return float(np.median(x))
-        elif aggregation_method == self.Aggregation.MAX:
-
-            def agg_fn(x):
-                return np.max(x)
-        elif aggregation_method == self.Aggregation.MIN:
-
-            def agg_fn(x):
-                return np.min(x)
-        elif aggregation_method == self.Aggregation.SUM:
-
-            def agg_fn(x):
-                return np.sum(x)
-        else:
-            raise ValueError(
-                f"aggregation method '{aggregation_method}' is not supported."
-            )
 
         if instructed:
             test_set = self.get_instructed()
@@ -287,12 +255,24 @@ class Benchmark(ABC, Dataset):
 
         scores, found_solutions = zip(
             *[
-                self.evaluate_output(o, t, evaluation_method)
+                self.evaluate_output(o, t, evaluation_fn)
                 for o, t in zip(outputs, targets)
             ]
         )
         scores = np.array(scores)
-        agg_score = agg_fn(scores)
+        if aggregation_fn not in NumberListOperation:
+            if logger is not None:
+                logger.error(
+                    {
+                        "[Benchmark.evaluate_subject] Unsupported aggregation function": str(
+                            aggregation_fn
+                        ),
+                        "Corrective action": "Use the fallback `np.mean` as a default aggregation operation.",
+                    }
+                )
+            agg_score = float(np.mean(scores))
+        else:
+            agg_score = aggregation_fn(scores)
 
         return inputs, targets, outputs, found_solutions, scores, agg_score, info
 
