@@ -59,7 +59,6 @@ class LetterConcatenation(Benchmark):
     ):
         """
         Build the letter concatenation dataset.
-        Requires internet connection.
 
         ### Parameters
         ----------
