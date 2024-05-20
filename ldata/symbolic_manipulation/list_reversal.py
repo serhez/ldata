@@ -34,7 +34,7 @@ class ListReversal(Benchmark):
 
     def __init__(self, config: Config):
         """
-        Initialize the letter concatenation benchmark.
+        Initialize the list reversal benchmark.
 
         ### Parameters
         ----------
@@ -57,7 +57,6 @@ class ListReversal(Benchmark):
     ):
         """
         Build the list reversal benchmark.
-        Requires internet connection.
 
         ### Parameters
         ----------
@@ -128,31 +127,31 @@ class ListReversal(Benchmark):
         return Dataset.Split(inputs, sample.targets)
 
     @classmethod
-    def _eval_word(cls, output: str, target: str) -> float:
+    def _eval_word(cls, output_word: str, target_word: str) -> float:
         """
-        Evaluate the output of the model for the list reversal task at the word level.
+        Evaluate a word of the output for the list reversal task at the word level.
 
         ### Parameters
         ----------
-        `output`: the output of the model.
-        `target`: the target output.
+        `output_word`: one of the words in the output list.
+        `target_word`: the corresponding word in the target list.
 
         ### Returns
         ----------
         The evaluation score.
         """
 
-        return float(output == target)
+        return float(output_word == target_word)
 
     @classmethod
-    def _eval_char(cls, output: str, target: str) -> float:
+    def _eval_char(cls, output_word: str, target_word: str) -> float:
         """
-        Evaluate the output of the model for the list reversal task at the character level.
+        Evaluate a word of the output for the list reversal task at the character level.
 
         ### Parameters
         ----------
-        `output`: the output of the model.
-        `target`: the target output.
+        `output_word`: one of the words in the output list.
+        `target_word`: the corresponding word in the target list.
 
         ### Returns
         ----------
@@ -162,9 +161,12 @@ class ListReversal(Benchmark):
         return float(
             np.mean(
                 [
-                    0.0 if i >= len(target) else float(output[i] == target[i])
-                    for i in range(len(output))
+                    0.0
+                    if i >= len(target_word)
+                    else float(output_word[i] == target_word[i])
+                    for i in range(min(len(output_word), len(target_word)))
                 ]
+                + [0.0] * abs(len(output_word) - len(target_word))
             )
         )
 
