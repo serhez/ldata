@@ -1,4 +1,4 @@
 from .linear_system_complex import LinearSystemComplex
-from .ordered_list_results import OrderedListResults
+from .sorted_list_results import SortedListResults
 
-__all__ = ["LinearSystemComplex", "OrderedListResults"]
+__all__ = ["LinearSystemComplex", "SortedListResults"]
