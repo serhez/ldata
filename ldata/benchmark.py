@@ -261,12 +261,12 @@ class Benchmark(ABC, Dataset):
                         f"[Benchmark.evaluate_subject] Evaluating sample {i + 1}/{len(inputs)}"
                     )
                 try:
-                    o, s = subject([inputs[i]])
-                    outputs.append(o[0])
+                    ind_outputs, ind_info = subject([inputs[i]])
+                    outputs.append("" if ind_outputs[0] is None else ind_outputs[0])
                     if info is None:
-                        info = s
+                        info = ind_info
                     else:
-                        info += s
+                        info += ind_info
                 except Exception as e:
                     if logger is not None:
                         logger.error(
