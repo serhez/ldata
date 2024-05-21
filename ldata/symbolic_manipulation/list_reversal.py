@@ -16,7 +16,7 @@ class ListReversal(Benchmark):
     The range of score values is [0.0, 1.0].
     """
 
-    _ALPHANUM_PATTERN = re.compile("[\W_]+")
+    _ALPHANUM_PATTERN = re.compile("[\W_]+")  # type: ignore[reportInvalidStringEscapeSequence]
     _INSTRUCTIONS_TEMPLATE = (
         "Reverse the order of the items in the following list: [{}]."
     )

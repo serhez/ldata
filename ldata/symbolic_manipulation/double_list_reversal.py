@@ -16,7 +16,7 @@ class DoubleListReversal(Benchmark):
     The range of score values is [0.0, 1.0].
     """
 
-    _ALPHANUM_PATTERN = re.compile("[\W_]+")
+    _ALPHANUM_PATTERN = re.compile("[\W_]+")  # type: ignore[reportInvalidStringEscapeSequence]
     _INSTRUCTIONS_TEMPLATE = "Reverse the characters of each item and then reverse the order of such items in the following list: [{}]."
 
     @dataclass(kw_only=True)

@@ -20,7 +20,7 @@ class NumberListSorting(Benchmark):
     The range of score values is [0.0, 1.0].
     """
 
-    _LIST_PATTERN = re.compile("\[.*?\]")
+    _LIST_PATTERN = re.compile("\[.*?\]")  # type: ignore[reportInvalidStringEscapeSequence]
     _INSTRUCTIONS_TEMPLATE = "Sort the items in the list [{list_}] in {order} order."
     _MIN_INT = 1
     _MAX_INT = 100

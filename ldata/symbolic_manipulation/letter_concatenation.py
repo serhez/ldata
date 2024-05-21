@@ -16,7 +16,7 @@ class LetterConcatenation(Benchmark):
     The range of score values is [0.0, 1.0].
     """
 
-    _ALPHANUM_PATTERN = re.compile("[\W_]+")
+    _ALPHANUM_PATTERN = re.compile("[\W_]+")  # type: ignore[reportInvalidStringEscapeSequence]
     _INSTRUCTIONS_TEMPLATE = "Concatenate the characters at index {} of each word in the list [{}], in the same order they appear in the list. Indices start at zero."
 
     @dataclass(kw_only=True)
