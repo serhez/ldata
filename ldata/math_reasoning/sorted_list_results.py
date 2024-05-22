@@ -2,10 +2,10 @@ import re
 from dataclasses import dataclass
 
 import numpy as np
-from utils import NumberListOperation, SortingOrder
 
 from ldata.benchmark import Benchmark
 from ldata.dataset import Dataset
+from ldata.utils import NumberListOperation, SortingOrder
 
 
 class SortedListResults(Benchmark):
