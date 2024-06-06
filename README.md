@@ -1,16 +1,13 @@
 # LData
 
 A collection of language-based datasets and benchmarks.
+This package deals mostly with the data part of the LLM R&D workflow. It contains mainly two abstractions: a `Dataset` and a `Benchmark`.
 
-## Definitions
+## Dataset
 
-This package deals mostly with the data part of the LLM R&D workflow. It contains mainly two abstractions defined as interfaces: a `Dataset` and a `Benchmark`.
+A `Dataset` is a collection of data units split into train and test arrays. While it is possible to create shuffled splits of the data, we provide tools to ensure reproducibility, so that you can compare different methods/models under the same conditions. Datasets can be used to pre-train, fine-tune or test models and methods in isolation.
 
-### Dataset
-
-A `Dataset` is a collection of data units split into train and test arrays. While it is possible to create an shuffled splits of the data, we provide predefined train/test splits so that you can compare different methods under the same conditions, as well as to ensure reproducibility in this regard. Datasets can be used to pre-train, fine-tune or test models and methods in isolation.
-
-#### Data files
+### Data files
 
 Data files used to create datasets must follow the following format:
 
@@ -18,6 +15,10 @@ Data files used to create datasets must follow the following format:
 - The first row must be the header `SAMPLE,TARGET`.
 - All values in the table must be strings, but they must not be enclosed by any type of delimiter (e.g., single or double quotes).
 
-### Benchmark
+## Benchmark
 
 A `Benchmark` is a `Dataset` that also provides a score reflecting the performance of the method being evaluated on a given task. Scores are encouraged to be within the range `[0.0, 1.0]` and to increase linearly with the quality of the method's results on the task. Benchmarks are useful to compare multiple models/methods empirically.
+
+## Creating new datasets and benchmarks
+
+This package is supposed to be a growing library of datasets and benchmarks for everyone to use; the more the better! You are encouraged to contribute new datasets or wrappers of existing ones. To be merged into this repository, datasets or benchmarks must faithfully implement the `Dataset` and `Benchmark` abstract classes, respectively. If you think there is something wrong or missing with these classes, feel free to open an issue!
