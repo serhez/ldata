@@ -22,3 +22,7 @@ A `Benchmark` is a `Dataset` that also provides a score reflecting the performan
 ## Creating new datasets and benchmarks
 
 This package is supposed to be a growing library of datasets and benchmarks for everyone to use; the more the better! You are encouraged to contribute new datasets or wrappers of existing ones. To be merged into this repository, datasets or benchmarks must faithfully implement the `Dataset` and `Benchmark` abstract classes, respectively. If you think there is something wrong or missing with these classes, feel free to open an issue!
+
+## Downloading datasets and benchmarks
+
+Currently, when you install this package, you will also download all datasets and benchmarks available in the `data` folder. This is not an issue at the moment, but as we scale up the number of datasets, we have in our "to-do" list to provide a sub-package for each available dataset, as well as for groups of them, so that you can install in your system the core components of the library plus only the datasets you need. Coming soon (hopefully)!.
