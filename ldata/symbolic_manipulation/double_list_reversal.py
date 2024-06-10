@@ -6,10 +6,10 @@ from typing import Callable
 import numpy as np
 
 from ldata.benchmark import Benchmark
-from ldata.dataset import Dataset
+from ldata.dataset import BuildableDataset, Dataset
 
 
-class DoubleListReversal(Benchmark):
+class DoubleListReversal(BuildableDataset, Benchmark):
     """
     Benchmark for the double list reversal task, where the characters of each item in a list are reversed and then the order of the resulting items are reversed.
     The evaluation metric is the number of correct element positions in the output list, as well as the correctness of the reversed elements, normalized by the number of elements.

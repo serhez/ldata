@@ -6,10 +6,10 @@ from typing import Callable
 import numpy as np
 
 from ldata.benchmark import Benchmark
-from ldata.dataset import Dataset
+from ldata.dataset import BuildableDataset, Dataset
 
 
-class LetterConcatenation(Benchmark):
+class LetterConcatenation(BuildableDataset, Benchmark):
     """
     Benchmark for the letter concatenation task.
     The evaluation metric is the number of correct characters in the output word.

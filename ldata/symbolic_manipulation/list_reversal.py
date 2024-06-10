@@ -6,10 +6,10 @@ from typing import Callable
 import numpy as np
 
 from ldata.benchmark import Benchmark
-from ldata.dataset import Dataset
+from ldata.dataset import BuildableDataset, Dataset
 
 
-class ListReversal(Benchmark):
+class ListReversal(BuildableDataset, Benchmark):
     """
     Benchmark for the list reversal task.
     The evaluation metric is the number of correct element positions in the output list, normalized by the number of elements.

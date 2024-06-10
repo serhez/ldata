@@ -5,10 +5,10 @@ from dataclasses import dataclass
 import numpy as np
 
 from ldata.benchmark import Benchmark
-from ldata.dataset import Dataset
+from ldata.dataset import BuildableDataset, Dataset
 
 
-class LinearSystemComplex(Benchmark):
+class LinearSystemComplex(BuildableDataset, Benchmark):
     """
     Benchmark consisting on solving a single variable given a linear system of equations, expressed in mathematical notation.
     The evaluation metric is the correctness of the numerical solution, up to two decimal places.

@@ -4,11 +4,11 @@ from dataclasses import dataclass
 import numpy as np
 
 from ldata.benchmark import Benchmark
-from ldata.dataset import Dataset
+from ldata.dataset import BuildableDataset, Dataset
 from ldata.utils import NumberListOperation, SortingOrder
 
 
-class SortedListResults(Benchmark):
+class SortedListResults(BuildableDataset, Benchmark):
     """
     Benchmark for the sorted list results task, where the results of `Config.operation` on a list of numbers are ordered in `Config.order`.
 

@@ -46,11 +46,10 @@ class Dataset(TorchDataset):
         """Cache the full dataset into RAM for faster access at the cost of memory."""
 
     @property
-    @abstractmethod
     def config_cls(cls) -> type[Config]:
         """The configuration class for the dataset."""
 
-        ...
+        return cls.Config
 
     class Split:
         """A split of the dataset, which contains input and target data."""
@@ -368,6 +367,10 @@ class Dataset(TorchDataset):
         )
         self._train_idxs = np.setdiff1d(self._train_idxs, self._shots_idxs)
         self._test_idxs = np.setdiff1d(np.arange(len(self.full_set)), self._train_idxs)
+
+
+class BuildableDataset(Dataset):
+    """A dataset object that can build its own data files."""
 
     @classmethod
     @abstractmethod
