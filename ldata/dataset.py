@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import random
+import urllib.request
 from abc import abstractmethod
 from dataclasses import dataclass
 from os import path
@@ -8,10 +10,13 @@ from typing import Any, Iterator, Sequence, Type, overload
 
 import numpy as np
 import numpy.typing as npt
+import requests
+from datasets import DatasetDict, concatenate_datasets, load_dataset
 from torch.utils.data import Dataset as TorchDataset
 
+from ldata.utils import DATASETS_API_URL
 
-# TODO: Allow the data file path to be in a remote server (e.g., a URL)
+
 # TODO: Implement chaching the dataset into a file if coming from a remote server
 # TODO: Implement paging to avoid loading the entire dataset into memory
 class Dataset(TorchDataset):
@@ -25,7 +30,19 @@ class Dataset(TorchDataset):
         """The name of the dataset used for reporting."""
 
         data_path: str
-        """The path to the `CSV` file containing the data."""
+        """
+        Either:
+        - The system path of the CSV file containing the data.
+        - The URL where the CSV file can be downloaded from (must include the protocol, e.g. `http://`).
+        - The name of the Hugging Face dataset. In this case, the dataset will be downloaded from the Hugging Face Hub.
+            - You need to specify your Hugging Face API token in the `HF_API_TOKEN` environment variable if the `data_path` is a Hugging Face dataset name.
+        """
+
+        inputs_column: str = "SAMPLE"
+        """The name of the column containing the input data in the data source."""
+
+        targets_column: str = "TARGET"
+        """The name of the column containing the target data in the data source."""
 
         seed: int = 42
         """The random seed to use for all randomization purposes."""
@@ -193,12 +210,8 @@ class Dataset(TorchDataset):
 
         ### Raises
         ----------
-        `FileNotFoundError`: if the data file does not exist.
         `ValueError`: if the test percentage is not between 0.0 and 1.0.
         """
-
-        if not path.isfile(config.data_path):
-            raise FileNotFoundError(f"Data file '{config.data_path}' does not exist.")
 
         if config.test_percentage < 0 or config.test_percentage > 1:
             raise ValueError("Test percentage must be between 0.0 and 1.0.")
@@ -260,17 +273,7 @@ class Dataset(TorchDataset):
         if hasattr(self, "_full_set"):
             return self._full_set
 
-        with open(self._config.data_path, "r") as file:
-            lines = file.readlines()[1:]
-            inputs = np.array(
-                [self._input_dtype(line.split(",")[0].strip()) for line in lines]
-            )
-            targets = np.array(
-                [
-                    self._target_dtype(t) if t else None
-                    for t in [line.split(",")[1].strip() for line in lines]
-                ]
-            )
+        inputs, targets = self._read_source(self._config.data_path)
 
         return self.Split(inputs, targets)
 
@@ -343,6 +346,104 @@ class Dataset(TorchDataset):
 
     def __iter__(self) -> Dataset.Split:
         return self.full_set
+
+    def _read_source(self, source: str) -> tuple[npt.NDArray[Any], npt.NDArray[Any]]:
+        """
+        Reads the data from the source.
+        The source can be a file path, a URL (including the protocol), or a Hugging Face dataset name.
+
+        ### Parameters
+        ----------
+        `source`: the source of the data.
+
+        ### Returns
+        ----------
+        A tuple containing the input and target data.
+
+        ### Raises
+        ----------
+        `ValueError`: if the data path is invalid for any of the supported sources.
+        `ValueError`: if the columns specified in the configuration are not found in the dataset.
+        `AssertionError`: if the source is infered to be a Hugging Face dataset name and the Hugging Face API token is not set in the `HF_API_TOKEN` environment variable.
+        """
+
+        columns_error_msg = f"Columns `{self._config.inputs_column}` and `{self._config.targets_column}` not found in the dataset. Check `Config.inputs_column` and `Config.targets_column`."
+        common_error_msg = "Check `Config.data_path` if you meant to load data from a file in your local system or hosted behind a URL."
+
+        def _read_csv(file) -> tuple[npt.NDArray[Any], npt.NDArray[Any]]:
+            lines = file.readlines()[1:]
+
+            # Find inputs and targets columns
+            headers = lines[0].split(",")
+            try:
+                inputs_column = headers.index(self._config.inputs_column)
+                targets_column = headers.index(self._config.targets_column)
+            except ValueError:
+                raise ValueError(columns_error_msg)
+
+            inputs = np.array(
+                [
+                    self._input_dtype(line.split(",")[inputs_column].strip())
+                    for line in lines
+                ]
+            )
+            targets = np.array(
+                [
+                    self._target_dtype(t) if t else None
+                    for t in [line.split(",")[targets_column].strip() for line in lines]
+                ]
+            )
+
+            return inputs, targets
+
+        # File in the local system
+        if path.exists(source):
+            with open(self._config.data_path, "r") as file:
+                inputs, targets = _read_csv(file)
+
+        # File hosted behind a URL
+        elif source.startswith("http"):
+            with urllib.request.urlopen(source) as file:
+                inputs, targets = _read_csv(file)
+
+        # Hugging Face dataset
+        else:
+            # Check if the user's API token is set
+            assert "HF_API_TOKEN" in os.environ, (
+                "You must set the `HF_API_TOKEN` environment variable to load datasets from the Hugging Face Hub. "
+                + common_error_msg
+            )
+            api_token = os.environ["HF_API_TOKEN"]
+
+            # Check if the dataset name is valid
+            url = f"{DATASETS_API_URL}/is-valid?dataset={source}"
+            headers = {"Authorization": f"Bearer {api_token}"}
+
+            def query():
+                response = requests.get(url, headers=headers)
+                return response.json()
+
+            data = query()
+            if data["viewer"] is False:
+                raise ValueError(
+                    f"The dataset `{source}` does not exist in the Hugging Face Hub or is not fully available to your account. "
+                    + common_error_msg
+                )
+
+            # Load the dataset
+            splits: DatasetDict = load_dataset(source)  # type: ignore[reportAssignmentType]
+            dataset = concatenate_datasets([split for split in splits.values()])
+
+            if (
+                self._config.inputs_column not in dataset.column_names
+                or self._config.targets_column not in dataset.column_names
+            ):
+                raise ValueError(columns_error_msg)
+
+            inputs = np.array(dataset[self._config.inputs_column])
+            targets = np.array(dataset[self._config.targets_column])
+
+        return inputs, targets
 
     def shuffle(self, seed: int | None = None):
         """
