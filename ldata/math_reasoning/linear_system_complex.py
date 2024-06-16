@@ -4,15 +4,15 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ldata.benchmark import Benchmark
+from ldata.benchmark import Benchmark, ComputableBenchmark
 from ldata.dataset import BuildableDataset, Dataset
 
 
-class LinearSystemComplex(BuildableDataset, Benchmark):
+class LinearSystemComplex(BuildableDataset, ComputableBenchmark):
     """
     Benchmark consisting on solving a single variable given a linear system of equations, expressed in mathematical notation.
     The evaluation metric is the correctness of the numerical solution, up to two decimal places.
-    The score values can be either 0.0 or 1.0, regardless of the `Evaluation`.
+    The score values can be either 0.0 or 1.0, regardless of the evaluation metric.
     All samples follow the format: "Solve for {variable}, given that {system}.".
     - The variable is a single letter.
     - The system is a list of equations, separated by semicolons. Each equation is in the form $\\sum_{i=1}^{n} a_i x_i = b$, where $a_i$ and $b$ are integers and $n$ is the number of variables. For example: "2x + 3y = 5; 4x = 6".
@@ -256,7 +256,7 @@ class LinearSystemComplex(BuildableDataset, Benchmark):
         """
         Evaluate the output of the model given the target.
         All samples are evaluated based on the correctness of the numerical solution, up to two decimal places.
-        The score values can be either 0.0 or 1.0, regardless of the `Evaluation`.
+        The score values can be either 0.0 or 1.0, regardless of the evaluation metric.
 
         ### Parameters
         ----------

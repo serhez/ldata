@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any, Callable, overload
 
 import numpy as np
@@ -8,10 +7,10 @@ import numpy.typing as npt
 
 from ldata.dataset import Dataset
 from ldata.protocols import Addable, Logger
+from ldata.types import EvaluationMetric
 from ldata.utils import NumberListOperation
 
 
-# TODO: Use different `Evaluation` methods for each benchmark, and expose the enum as with `config_cls`.
 class Benchmark(ABC, Dataset):
     """Abstract class for a benchmark."""
 
@@ -28,13 +27,6 @@ class Benchmark(ABC, Dataset):
         """The configuration class for the Benchmark."""
 
         ...
-
-    class Evaluation(Enum):
-        """The level of exactness measured by the evaluation metric."""
-
-        EXACT = "exact"
-        WORD = "word"
-        CHARACTER = "character"
 
     def __init__(self, config: Config):
         """
@@ -137,7 +129,7 @@ class Benchmark(ABC, Dataset):
         self,
         subject: Callable[[list[Any]], tuple[list[Any], Addable | None]],
         n_samples: int | None = None,
-        evaluation_fn: Evaluation = Evaluation.EXACT,
+        metric: EvaluationMetric = EvaluationMetric.EXACT,
         aggregation_fn: NumberListOperation = NumberListOperation.MEAN,
         instructed: bool = True,
         shuffle: bool = False,
@@ -160,7 +152,7 @@ class Benchmark(ABC, Dataset):
         `subject`: the subject to evaluate, which must be a function that takes an array of input strings and returns a tuple containing an array of output strings and an optional addable object with extra information about the generation process.
         `n_samples`: the number of samples to evaluate the subject on.
         - If `None` (default), the whole test set is used.
-        `evaluation_fn`: the level of exactness measured by the evaluation metric.
+        `metric`: the metric to evaluate the output.
         `aggregation_fn`: the method to aggregate the scores of the (input, output) pairs.
         `instructed`: whether to use the instructed test set (as given by `get_instructed`) or the regular test set.
         `shuffle`: whether to shuffle the test set before selecting the samples.
@@ -255,7 +247,7 @@ class Benchmark(ABC, Dataset):
 
         scores, found_solutions = zip(
             *[
-                self.evaluate_output(o, t, evaluation_fn)
+                self.evaluate_output(o, t, metric, logger)
                 for o, t in zip(outputs, targets)
             ]
         )
@@ -278,7 +270,11 @@ class Benchmark(ABC, Dataset):
 
     @classmethod
     def evaluate_output(
-        cls, output: str, target: str, evaluation_method: Evaluation
+        cls,
+        output: str,
+        target: str,
+        metric: EvaluationMetric,
+        logger: Logger | None = None,
     ) -> tuple[float, str]:
         """
         Evaluate a single (input, output) pair.
@@ -287,7 +283,7 @@ class Benchmark(ABC, Dataset):
         ----------
         `output`: the output of the subject.
         `target`: the target output.
-        `evaluation_method`: the level of exactness measured by the evaluation metric.
+        `metric`: the evaluation metric.
 
         ### Returns
         -------
@@ -299,14 +295,18 @@ class Benchmark(ABC, Dataset):
         """
 
         found_solution = cls.extract_solution([output], [target])[0]
-        score = cls._evaluate_output_impl(found_solution, target, evaluation_method)
+        score = cls._evaluate_output_impl(found_solution, target, metric, logger)
 
         return score, found_solution
 
     @classmethod
     @abstractmethod
     def _evaluate_output_impl(
-        cls, output: str, target: str, evaluation_method: Evaluation
+        cls,
+        output: str,
+        target: str,
+        metric: EvaluationMetric,
+        logger: Logger | None = None,
     ) -> float:
         """
         The child class' internal implementation of `evaluate_output`.
@@ -317,29 +317,11 @@ class Benchmark(ABC, Dataset):
         ----------
         `output`: the output of the subject.
         `target`: the target output.
-        `evaluation_method`: the level of exactness measured by the evaluation metric.
+        `metric`: the evaluation metric.
 
         ### Returns
         -------
         The score of the output.
-        """
-
-        ...
-
-    @classmethod
-    @abstractmethod
-    def compute_target(cls, input: str, **kwargs: Any) -> str:
-        """
-        Compute the target output for the uninstructed input.
-        If the input is instructed, you must use `get_uninstructed` before passing it to this function.
-
-        ### Parameters
-        ----------
-        `input`: the uninstructed input string.
-
-        ### Returns
-        ----------
-        The target output.
         """
 
         ...
@@ -411,6 +393,26 @@ class Benchmark(ABC, Dataset):
         ### Returns
         ----------
         The extracted and formatted solution.
+        """
+
+        ...
+
+
+class ComputableBenchmark(Benchmark, ABC):
+    @classmethod
+    @abstractmethod
+    def compute_target(cls, input: str, **kwargs: Any) -> str:
+        """
+        Compute the target output for the uninstructed input.
+        If the input is instructed, you must use `get_uninstructed` before passing it to this function.
+
+        ### Parameters
+        ----------
+        `input`: the uninstructed input string.
+
+        ### Returns
+        ----------
+        The target output.
         """
 
         ...

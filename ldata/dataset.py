@@ -273,7 +273,10 @@ class Dataset(TorchDataset):
         if hasattr(self, "_full_set"):
             return self._full_set
 
-        inputs, targets = self._read_source(self._config.data_path)
+        inputs, targets = self._read_source(
+            self._config.data_path,
+            [self._config.inputs_column, self._config.targets_column],
+        )
 
         return self.Split(inputs, targets)
 
@@ -347,7 +350,9 @@ class Dataset(TorchDataset):
     def __iter__(self) -> Dataset.Split:
         return self.full_set
 
-    def _read_source(self, source: str) -> tuple[npt.NDArray[Any], npt.NDArray[Any]]:
+    def _read_source(
+        self, source: str, columns: list[str]
+    ) -> tuple[npt.NDArray[Any], ...]:
         """
         Reads the data from the source.
         The source can be a file path, a URL (including the protocol), or a Hugging Face dataset name.
@@ -355,56 +360,49 @@ class Dataset(TorchDataset):
         ### Parameters
         ----------
         `source`: the source of the data.
+        `columns`: the columns to read from the data source.
 
         ### Returns
         ----------
-        A tuple containing the input and target data.
+        A tuple of the data from the requested columns.
 
         ### Raises
         ----------
         `ValueError`: if the data path is invalid for any of the supported sources.
-        `ValueError`: if the columns specified in the configuration are not found in the dataset.
+        `ValueError`: if the given columns are not found in the dataset.
         `AssertionError`: if the source is infered to be a Hugging Face dataset name and the Hugging Face API token is not set in the `HF_API_TOKEN` environment variable.
         """
 
-        columns_error_msg = f"Columns `{self._config.inputs_column}` and `{self._config.targets_column}` not found in the dataset. Check `Config.inputs_column` and `Config.targets_column`."
+        columns_error_msg = f"Columns `{columns}` not found in the dataset. Check `Config.inputs_column` and `Config.targets_column`."
         common_error_msg = "Check `Config.data_path` if you meant to load data from a file in your local system or hosted behind a URL."
 
-        def _read_csv(file) -> tuple[npt.NDArray[Any], npt.NDArray[Any]]:
+        def _read_columns(file) -> tuple[npt.NDArray[Any], ...]:
             lines = file.readlines()[1:]
 
-            # Find inputs and targets columns
+            # Find columns indeces
             headers = lines[0].split(",")
             try:
-                inputs_column = headers.index(self._config.inputs_column)
-                targets_column = headers.index(self._config.targets_column)
+                columns_idxs = [headers.index(column) for column in columns]
             except ValueError:
                 raise ValueError(columns_error_msg)
 
-            inputs = np.array(
-                [
-                    self._input_dtype(line.split(",")[inputs_column].strip())
-                    for line in lines
-                ]
+            # Return the data from the requested columns
+            return tuple(
+                np.array(
+                    [self._input_dtype(line.split(",")[i].strip()) for line in lines]
+                )
+                for i in columns_idxs
             )
-            targets = np.array(
-                [
-                    self._target_dtype(t) if t else None
-                    for t in [line.split(",")[targets_column].strip() for line in lines]
-                ]
-            )
-
-            return inputs, targets
 
         # File in the local system
         if path.exists(source):
             with open(self._config.data_path, "r") as file:
-                inputs, targets = _read_csv(file)
+                data = _read_columns(file)
 
         # File hosted behind a URL
         elif source.startswith("http"):
             with urllib.request.urlopen(source) as file:
-                inputs, targets = _read_csv(file)
+                data = _read_columns(file)
 
         # Hugging Face dataset
         else:
@@ -434,16 +432,12 @@ class Dataset(TorchDataset):
             splits: DatasetDict = load_dataset(source)  # type: ignore[reportAssignmentType]
             dataset = concatenate_datasets([split for split in splits.values()])
 
-            if (
-                self._config.inputs_column not in dataset.column_names
-                or self._config.targets_column not in dataset.column_names
-            ):
+            if any(column not in dataset.column_names for column in columns):
                 raise ValueError(columns_error_msg)
 
-            inputs = np.array(dataset[self._config.inputs_column])
-            targets = np.array(dataset[self._config.targets_column])
+            data = tuple(np.array(dataset[column]) for column in columns)
 
-        return inputs, targets
+        return data
 
     def shuffle(self, seed: int | None = None):
         """

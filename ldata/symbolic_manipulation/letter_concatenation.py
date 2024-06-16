@@ -5,11 +5,12 @@ from typing import Callable
 
 import numpy as np
 
-from ldata.benchmark import Benchmark
+from ldata.benchmark import Benchmark, ComputableBenchmark
 from ldata.dataset import BuildableDataset, Dataset
+from ldata.types import EvaluationMetric
 
 
-class LetterConcatenation(BuildableDataset, Benchmark):
+class LetterConcatenation(BuildableDataset, ComputableBenchmark):
     """
     Benchmark for the letter concatenation task.
     The evaluation metric is the number of correct characters in the output word.
@@ -138,15 +139,13 @@ class LetterConcatenation(BuildableDataset, Benchmark):
         cls,
         output: str,
         target: str,
-        evaluation_method: Benchmark.Evaluation = Benchmark.Evaluation.CHARACTER,
+        metric: EvaluationMetric = EvaluationMetric.CHARACTER,
+        _=None,
     ) -> float:
         output = output.replace(" ", "")
         target = target.replace(" ", "")
 
-        if (
-            evaluation_method == Benchmark.Evaluation.EXACT
-            or evaluation_method == Benchmark.Evaluation.WORD
-        ):
+        if metric == EvaluationMetric.EXACT or metric == EvaluationMetric.WORD:
             return float(output == target)
 
         # Evaluation.CHARACTER
@@ -202,7 +201,7 @@ class LetterConcatenation(BuildableDataset, Benchmark):
 
                 # Score the concatenated contiguous letters
                 current_score = cls._evaluate_output_impl(
-                    current_match, target, Benchmark.Evaluation.CHARACTER
+                    current_match, target, EvaluationMetric.CHARACTER
                 )
                 if current_score > best_score:
                     best_match = current_match

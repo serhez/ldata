@@ -3,12 +3,13 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ldata.benchmark import Benchmark
+from ldata.benchmark import Benchmark, ComputableBenchmark
 from ldata.dataset import BuildableDataset, Dataset
+from ldata.types import EvaluationMetric
 from ldata.utils import SortingOrder
 
 
-class NumberListSorting(BuildableDataset, Benchmark):
+class NumberListSorting(BuildableDataset, ComputableBenchmark):
     """
     Benchmark for the number list sorting task.
 
@@ -156,11 +157,12 @@ class NumberListSorting(BuildableDataset, Benchmark):
         cls,
         output: str,
         target: str,
-        evaluation_method: Benchmark.Evaluation = Benchmark.Evaluation.CHARACTER,
+        metric: EvaluationMetric = EvaluationMetric.CHARACTER,
+        _=None,
     ) -> float:
-        if evaluation_method == Benchmark.Evaluation.EXACT:
+        if metric == EvaluationMetric.EXACT:
             return float(output == target)
-        elif evaluation_method == Benchmark.Evaluation.WORD:
+        elif metric == EvaluationMetric.WORD:
             output_list = []
             for w in output.split(" "):
                 try:
@@ -179,7 +181,7 @@ class NumberListSorting(BuildableDataset, Benchmark):
                     + [0.0] * abs(len(output_list) - len(target_list))
                 )
             )
-        elif evaluation_method == Benchmark.Evaluation.CHARACTER:
+        elif metric == EvaluationMetric.CHARACTER:
             return float(
                 np.mean(
                     [
@@ -191,7 +193,7 @@ class NumberListSorting(BuildableDataset, Benchmark):
             )
         else:
             raise ValueError(
-                f"Invalid evaluation method: {evaluation_method}. Must be one of {Benchmark.Evaluation}."
+                f"Invalid evaluation method: {metric}. Must be one of {EvaluationMetric}."
             )
 
     @classmethod
@@ -216,7 +218,7 @@ class NumberListSorting(BuildableDataset, Benchmark):
                 current_score = cls._evaluate_output_impl(
                     " ".join(current_match),
                     target,
-                    Benchmark.Evaluation.CHARACTER,
+                    EvaluationMetric.CHARACTER,
                 )
                 if current_score > best_score:
                     best_match = current_match

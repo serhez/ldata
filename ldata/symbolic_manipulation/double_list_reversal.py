@@ -5,11 +5,12 @@ from typing import Callable
 
 import numpy as np
 
-from ldata.benchmark import Benchmark
+from ldata.benchmark import Benchmark, ComputableBenchmark
 from ldata.dataset import BuildableDataset, Dataset
+from ldata.types import EvaluationMetric
 
 
-class DoubleListReversal(BuildableDataset, Benchmark):
+class DoubleListReversal(BuildableDataset, ComputableBenchmark):
     """
     Benchmark for the double list reversal task, where the characters of each item in a list are reversed and then the order of the resulting items are reversed.
     The evaluation metric is the number of correct element positions in the output list, as well as the correctness of the reversed elements, normalized by the number of elements.
@@ -176,17 +177,18 @@ class DoubleListReversal(BuildableDataset, Benchmark):
         cls,
         output: str,
         target: str,
-        evaluation_method: Benchmark.Evaluation = Benchmark.Evaluation.CHARACTER,
+        metric: EvaluationMetric = EvaluationMetric.CHARACTER,
+        _=None,
     ) -> float:
-        if evaluation_method == Benchmark.Evaluation.EXACT:
+        if metric == EvaluationMetric.EXACT:
             return float(output == target)
-        elif evaluation_method == Benchmark.Evaluation.WORD:
+        elif metric == EvaluationMetric.WORD:
             eval_fn = cls._eval_word
-        elif evaluation_method == Benchmark.Evaluation.CHARACTER:
+        elif metric == EvaluationMetric.CHARACTER:
             eval_fn = cls._eval_char
         else:
             raise NotImplementedError(
-                f"Evaluation method {evaluation_method} is not implemented for this dataset."
+                f"Evaluation method {metric} is not implemented for this dataset."
             )
 
         output_list = output.split(" ")
@@ -217,7 +219,7 @@ class DoubleListReversal(BuildableDataset, Benchmark):
                 current_score = cls._evaluate_output_impl(
                     " ".join(current_match),
                     target,
-                    Benchmark.Evaluation.CHARACTER,
+                    EvaluationMetric.CHARACTER,
                 )
                 if current_score > best_score:
                     best_match = current_match
