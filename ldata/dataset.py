@@ -14,7 +14,7 @@ import requests
 from datasets import DatasetDict, concatenate_datasets, load_dataset
 from torch.utils.data import Dataset as TorchDataset
 
-from ldata.utils import DATASETS_API_URL
+from ldata.utils import DATASETS_API_URL, read_csv_columns
 
 
 # TODO: Implement chaching the dataset into a file if coming from a remote server
@@ -376,33 +376,19 @@ class Dataset(TorchDataset):
         columns_error_msg = f"Columns `{columns}` not found in the dataset. Check `Config.inputs_column` and `Config.targets_column`."
         common_error_msg = "Check `Config.data_path` if you meant to load data from a file in your local system or hosted behind a URL."
 
-        def _read_columns(file) -> tuple[npt.NDArray[Any], ...]:
-            lines = file.readlines()[1:]
-
-            # Find columns indeces
-            headers = lines[0].split(",")
-            try:
-                columns_idxs = [headers.index(column) for column in columns]
-            except ValueError:
-                raise ValueError(columns_error_msg)
-
-            # Return the data from the requested columns
-            return tuple(
-                np.array(
-                    [self._input_dtype(line.split(",")[i].strip()) for line in lines]
-                )
-                for i in columns_idxs
-            )
-
         # File in the local system
         if path.exists(source):
             with open(self._config.data_path, "r") as file:
-                data = _read_columns(file)
+                data = read_csv_columns(
+                    file, columns, dtype=self._input_dtype, error_msg=columns_error_msg
+                )
 
         # File hosted behind a URL
         elif source.startswith("http"):
             with urllib.request.urlopen(source) as file:
-                data = _read_columns(file)
+                data = read_csv_columns(
+                    file, columns, dtype=self._input_dtype, error_msg=columns_error_msg
+                )
 
         # Hugging Face dataset
         else:
