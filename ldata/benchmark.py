@@ -213,12 +213,19 @@ class Benchmark(ABC, Dataset):
 
         if unsafe:
             outputs, info = subject(list(inputs))
+            scores, found_solutions = zip(
+                *[
+                    self.evaluate_output(o, t, metric, logger)
+                    for o, t in zip(outputs, targets)
+                ]
+            )
         else:
             outputs, info = [], None
+            scores, found_solutions = [], []
             for i in range(len(inputs)):
                 if logger is not None:
                     logger.info(
-                        f"[Benchmark.evaluate_subject] Evaluating sample {i + 1}/{len(inputs)}"
+                        f"[Benchmark.evaluate_subject] Evaluating sample {i+1}/{len(inputs)}"
                     )
                 try:
                     ind_outputs, ind_info = subject([inputs[i]])
@@ -227,6 +234,24 @@ class Benchmark(ABC, Dataset):
                         info = ind_info
                     else:
                         info += ind_info
+
+                    score, found_solution = self.evaluate_output(
+                        outputs[i], targets[i], metric, logger
+                    )
+                    scores.append(score)
+                    found_solutions.append(found_solution)
+                    if logger is not None:
+                        logger.info(
+                            {
+                                f"[Benchmark.evaluate_subject] Evaluated sample {i+1}/{len(inputs)}": {
+                                    "Input": inputs[i],
+                                    "Output": outputs[i],
+                                    "Target": targets[i],
+                                    "Found solution": found_solution,
+                                    "Score": score,
+                                }
+                            }
+                        )
                 except Exception as e:
                     if logger is not None:
                         logger.error(
@@ -235,22 +260,18 @@ class Benchmark(ABC, Dataset):
                                     e
                                 ),
                                 "Input": inputs[i],
-                                "Corrective action": "The stats are set to `None` and the output is set to an empty string; the score will likely be 0.0.",
+                                "Corrective action": "The stats for this sample are ignored, the output and found solution are set to an empty string and the score will be 0.0.",
                             }
                         )
                     outputs.append("")
+                    scores.append(0.0)
+                    found_solutions.append("")
                     if info is not None:
                         info += None
         assert (
             len(outputs) == len(inputs)
         ), "the number of output strings returned by the subject must be the same as the number of input strings."
 
-        scores, found_solutions = zip(
-            *[
-                self.evaluate_output(o, t, metric, logger)
-                for o, t in zip(outputs, targets)
-            ]
-        )
         scores = np.array(scores)
         if aggregation_fn not in NumberListOperation:
             if logger is not None:
@@ -259,7 +280,7 @@ class Benchmark(ABC, Dataset):
                         "[Benchmark.evaluate_subject] Unsupported aggregation function": str(
                             aggregation_fn
                         ),
-                        "Corrective action": "Use the fallback `np.mean` as a default aggregation operation.",
+                        "Corrective action": "`np.mean` will be used as the fallback aggregation operation.",
                     }
                 )
             agg_score = float(np.mean(scores))
