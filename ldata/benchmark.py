@@ -430,6 +430,7 @@ class ComputableBenchmark(Benchmark, ABC):
         ### Parameters
         ----------
         `input`: the uninstructed input string.
+        Other keyword arguments may be required by each specific benchmark.
 
         ### Returns
         ----------
