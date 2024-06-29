@@ -1,3 +1,4 @@
+import itertools
 import random
 import re
 from dataclasses import dataclass
@@ -7,10 +8,13 @@ import numpy as np
 
 from ldata.benchmark import Benchmark, ComputableBenchmark
 from ldata.dataset import BuildableDataset, Dataset
-from ldata.types import EvaluationMetric
+from ldata.method_integrations import RecursivePromptingCompatible
+from ldata.types import EvaluationMetric, Separator
 
 
-class LetterConcatenation(BuildableDataset, ComputableBenchmark):
+class LetterConcatenation(
+    BuildableDataset, ComputableBenchmark, RecursivePromptingCompatible
+):
     """
     Benchmark for the letter concatenation task.
     The evaluation metric is the number of correct characters in the output word.
@@ -18,7 +22,7 @@ class LetterConcatenation(BuildableDataset, ComputableBenchmark):
     """
 
     _ALPHANUM_PATTERN = re.compile("[\W_]+")  # type: ignore[reportInvalidStringEscapeSequence]
-    _INSTRUCTIONS_TEMPLATE = "Concatenate the characters at index {} of each word in the list [{}], in the same order they appear in the list. Indices start at zero."
+    _INSTRUCTIONS_TEMPLATE = "Concatenate using a {} the characters at index {} of each word in the list [{}]; indices start at zero."
 
     @dataclass(kw_only=True)
     class Config(Benchmark.Config):
@@ -29,6 +33,9 @@ class LetterConcatenation(BuildableDataset, ComputableBenchmark):
 
         letter_idx: int
         """The character's index of the words to concatenate."""
+
+        separator: Separator = Separator.SPACE
+        """The separator between the words in the list."""
 
     @property
     def config_cls(self) -> type[Config]:
@@ -45,9 +52,16 @@ class LetterConcatenation(BuildableDataset, ComputableBenchmark):
 
         super().__init__(config)
 
+        # pyright is too dumb to infer this...
+        self._config: LetterConcatenation.Config
+
     @classmethod
-    def compute_target(cls, input: str, letter_idx: int) -> str:
-        return " ".join([word[letter_idx] for word in input.split(" ")])
+    def compute_target(
+        cls, input: str, letter_idx: int, separator: Separator = Separator.SPACE
+    ) -> str:
+        return separator.value.join(
+            [word[letter_idx] for word in input.split(separator.value)]
+        )
 
     @classmethod
     def build(
@@ -99,13 +113,17 @@ class LetterConcatenation(BuildableDataset, ComputableBenchmark):
 
         if isinstance(sample, str):
             return self._INSTRUCTIONS_TEMPLATE.format(
-                self._config.letter_idx, ", ".join(sample.split(" "))
+                self._config.separator.descriptor,
+                self._config.letter_idx,
+                ", ".join(sample.split(" ")),
             )
 
         inputs = np.array(
             [
                 self._INSTRUCTIONS_TEMPLATE.format(
-                    self._config.letter_idx, ", ".join(s.split(" "))
+                    self._config.separator.descriptor,
+                    self._config.letter_idx,
+                    ", ".join(s.split(" ")),
                 )
                 for s in sample.inputs
             ]
@@ -142,8 +160,8 @@ class LetterConcatenation(BuildableDataset, ComputableBenchmark):
         metric: EvaluationMetric = EvaluationMetric.CHARACTER,
         _=None,
     ) -> float:
-        output = output.replace(" ", "")
-        target = target.replace(" ", "")
+        output = cls._ALPHANUM_PATTERN.sub("", output)
+        target = cls._ALPHANUM_PATTERN.sub("", target)
 
         if metric == EvaluationMetric.EXACT or metric == EvaluationMetric.WORD:
             return float(output == target)
@@ -192,7 +210,7 @@ class LetterConcatenation(BuildableDataset, ComputableBenchmark):
         output = cls._ALPHANUM_PATTERN.sub("", output)
 
         # Step 2: find the sequence that best matches the target,
-        #         either as a single word or as a concatenation of single-character words
+        # either as a single word or as a concatenation of single-character words
         best_match = ""
         best_score = 0
         for s in range(len(output)):
@@ -208,3 +226,78 @@ class LetterConcatenation(BuildableDataset, ComputableBenchmark):
                     best_score = current_score
 
         return best_match
+
+    ## Recursive Prompting Integration
+
+    def get_subproblems(
+        self,
+        sample: str,
+        n_subproblems: int,
+    ) -> list[tuple[str, str]]:
+        # Split the input into `n_subproblems` sub-problems
+        words = sample.split(self._config.separator.value)
+        subproblems = [
+            self._config.separator.value.join(
+                words[i : i + len(words) // n_subproblems]
+            )
+            for i in range(0, len(words), len(words) // n_subproblems)
+        ]
+
+        # Instruct the sub-problems
+        subproblems = [self.get_instructed(subproblem) for subproblem in subproblems]
+
+        # Generate the sub-solutions
+        subsolutions = [
+            self.compute_target(subproblem, 0)  # type: ignore[reportArgumentType]
+            for subproblem in subproblems
+        ]
+
+        return list(zip(subproblems, subsolutions))  # type: ignore[reportReturnType]
+
+    def evaluate_split(
+        self,
+        input: str,
+        split: list[str],
+        n_subproblems: int | None = None,
+    ) -> float:
+        # Check there are `n_subproblems` subproblems
+        if n_subproblems is not None and len(split) != n_subproblems:
+            return 0.0
+
+        input_list = input.split(self._config.separator.value)
+
+        # Find the lists substrings in each string of the split
+        split_words = [re.search(r"\[(.*?)\]", s) for s in split]
+        if not all(split_words):
+            return 0.0
+
+        # Create actual lists from the list-strings
+        split_lists = [[w.strip() for w in s.group(1).split(",")] for s in split_words]  # type: ignore
+
+        # Concatenate the lists
+        split_concat_list = list(itertools.chain.from_iterable(split_lists))
+
+        return float(split_concat_list == input_list)
+
+    def evaluate_merge(
+        self,
+        split: list[str],
+        merged: str,
+    ) -> tuple[float, str]:
+        # Get the sub-problems' words
+        split_words = [re.search(r"\[(.*?)\]", s) for s in split]
+        if not all(split_words):
+            return -1.0, ""
+
+        # Create actual lists from the list-strings
+        split_lists = [[w.strip() for w in s.group(1).split(",")] for s in split_words]  # type: ignore
+
+        # Concatenate the lists
+        split_concat_list = list(itertools.chain.from_iterable(split_lists))
+
+        # Create the target
+        target = self.compute_target(
+            self._config.separator.value.join(split_concat_list), 0
+        )
+
+        return self.evaluate_output(merged, target, EvaluationMetric.EXACT)
