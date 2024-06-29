@@ -71,7 +71,7 @@ class NumberListSorting(BuildableDataset, ComputableBenchmark):
         path: str,
         n_samples: int,
         n_list_items: int,
-        order: SortingOrder,
+        order: SortingOrder = SortingOrder.ASCENDING,
     ):
         """
         Build the sorted list results benchmark.

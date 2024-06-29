@@ -305,10 +305,11 @@ class Benchmark(ABC, Dataset):
         `output`: the output of the subject.
         `target`: the target output.
         `metric`: the evaluation metric.
+        [optional] `logger`: the logger to use for logging the exceptions raised by the subject.
 
         ### Returns
         -------
-        A tuple containing the found solution (via `extract_solution`) and the score of the solution.
+        A tuple containing the score of the solution and the found solution (via `extract_solution`).
 
         ### Notes
         ----------
@@ -339,6 +340,7 @@ class Benchmark(ABC, Dataset):
         `output`: the output of the subject.
         `target`: the target output.
         `metric`: the evaluation metric.
+        [optional] `logger`: the logger to use for logging the exceptions raised by the subject.
 
         ### Returns
         -------

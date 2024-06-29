@@ -94,8 +94,8 @@ class SortedListResults(BuildableDataset, ComputableBenchmark):
         n_samples: int,
         n_lists: int,
         n_list_items: int,
-        operation: NumberListOperation,
-        order: SortingOrder,
+        operation: NumberListOperation = NumberListOperation.SUM,
+        order: SortingOrder = SortingOrder.ASCENDING,
     ):
         """
         Build the sorted list results benchmark.
