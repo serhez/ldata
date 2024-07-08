@@ -60,7 +60,7 @@ class LetterConcatenation(
         cls, input: str, letter_idx: int, separator: Separator = Separator.SPACE
     ) -> str:
         return separator.value.join(
-            [word[letter_idx] for word in input.split(separator.value)]
+            [str(word[letter_idx]).lower() for word in input.split(separator.value)]
         )
 
     @classmethod
@@ -160,8 +160,8 @@ class LetterConcatenation(
         metric: EvaluationMetric = EvaluationMetric.CHARACTER,
         _=None,
     ) -> float:
-        output = cls._ALPHANUM_PATTERN.sub("", output)
-        target = cls._ALPHANUM_PATTERN.sub("", target)
+        output = cls._ALPHANUM_PATTERN.sub("", output).lower()
+        target = cls._ALPHANUM_PATTERN.sub("", target).lower()
 
         if metric == EvaluationMetric.EXACT or metric == EvaluationMetric.WORD:
             return float(output == target)
@@ -207,7 +207,7 @@ class LetterConcatenation(
     @classmethod
     def _extract_solution_impl(cls, output: str, target: str) -> str:
         # Step 1: clean the output
-        output = cls._ALPHANUM_PATTERN.sub("", output)
+        output = cls._ALPHANUM_PATTERN.sub("", output).lower()
 
         # Step 2: find the sequence that best matches the target,
         # either as a single word or as a concatenation of single-character words
@@ -225,7 +225,7 @@ class LetterConcatenation(
                     best_match = current_match
                     best_score = current_score
 
-        return best_match
+        return best_match.lower()
 
     ## Recursive Prompting Integration
 
@@ -264,7 +264,7 @@ class LetterConcatenation(
         if n_subproblems is not None and len(split) != n_subproblems:
             return 0.0
 
-        input_list = input.split(self._config.separator.value)
+        input_list = [w.lower() for w in input.split(self._config.separator.value)]
 
         # Find the lists substrings in each string of the split
         split_words = [re.search(r"\[(.*?)\]", s) for s in split]
@@ -272,7 +272,10 @@ class LetterConcatenation(
             return 0.0
 
         # Create actual lists from the list-strings
-        split_lists = [[w.strip() for w in s.group(1).split(",")] for s in split_words]  # type: ignore
+        split_lists = [
+            [w.strip().lower() for w in s.group(1).split(",")]  # type: ignore[reportOptionalMemberAccess]
+            for s in split_words
+        ]
 
         # Concatenate the lists
         split_concat_list = list(itertools.chain.from_iterable(split_lists))
@@ -290,7 +293,10 @@ class LetterConcatenation(
             return -1.0, ""
 
         # Create actual lists from the list-strings
-        split_lists = [[w.strip() for w in s.group(1).split(",")] for s in split_words]  # type: ignore
+        split_lists = [
+            [w.strip().lower() for w in s.group(1).split(",")]  # type: ignore[reportOptionalMemberAccess]
+            for s in split_words
+        ]
 
         # Concatenate the lists
         split_concat_list = list(itertools.chain.from_iterable(split_lists))

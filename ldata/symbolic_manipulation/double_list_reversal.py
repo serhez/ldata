@@ -44,7 +44,7 @@ class DoubleListReversal(BuildableDataset, ComputableBenchmark):
 
     @classmethod
     def compute_target(cls, input: str) -> str:
-        return " ".join([w[::-1] for w in input.split(" ")][::-1])
+        return " ".join([w[::-1].lower() for w in input.split(" ")][::-1])
 
     @classmethod
     def build(
@@ -141,11 +141,13 @@ class DoubleListReversal(BuildableDataset, ComputableBenchmark):
         """
 
         word_scores = []
-        output_words = output.split(" ")
-        target_words = target.split(" ")
+        output_words = [w.strip().lower() for w in output.split(" ")]
+        target_words = [w.strip().lower() for w in target.split(" ")]
+
         for i in range(min(len(output), len(target))):
             word_scores.append(float(output_words[i] == target_words[i]))
         word_scores += [0.0] * abs(len(output_words) - len(target_words))
+
         return float(np.mean(word_scores))
 
     @classmethod
@@ -162,6 +164,9 @@ class DoubleListReversal(BuildableDataset, ComputableBenchmark):
         ----------
         The evaluation score.
         """
+
+        output = cls._ALPHANUM_PATTERN.sub("", output).lower()
+        target = cls._ALPHANUM_PATTERN.sub("", target).lower()
 
         return float(
             np.mean(
@@ -180,6 +185,9 @@ class DoubleListReversal(BuildableDataset, ComputableBenchmark):
         metric: EvaluationMetric = EvaluationMetric.CHARACTER,
         _=None,
     ) -> float:
+        output = output.strip().lower()
+        target = target.strip().lower()
+
         if metric == EvaluationMetric.EXACT:
             return float(output == target)
         elif metric == EvaluationMetric.WORD:
@@ -208,7 +216,7 @@ class DoubleListReversal(BuildableDataset, ComputableBenchmark):
     def _extract_solution_impl(cls, output: str, target: str) -> str:
         # Step 1: clean the output and split it into words
         words = [cls._ALPHANUM_PATTERN.sub("", w) for w in output.split(" ")]
-        words = [w for w in words if w != ""]
+        words = [w.lower() for w in words if w != ""]
 
         # Step 2: find the longest sequence of words that are in the target list
         best_match = []
