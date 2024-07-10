@@ -159,37 +159,22 @@ class LetterConcatenation(
         metric: EvaluationMetric = EvaluationMetric.CHARACTER,
         _=None,
     ) -> float:
-        # Attempt to remove the word "and" from the output
-        output_no_and = output.lower().replace(" and ", " ")
+        output = self._ALPHANUM_PATTERN.sub("", output).lower()
+        target = self._ALPHANUM_PATTERN.sub("", target).lower()
 
-        for output_edit in [output, output_no_and]:
-            output_clean = self._ALPHANUM_PATTERN.sub("", output_edit).lower()
-            target_clean = self._ALPHANUM_PATTERN.sub("", target).lower()
+        if metric == EvaluationMetric.EXACT or metric == EvaluationMetric.WORD:
+            return float(output == target)
 
-            if (
-                output.lower() == "a and o" or output.lower() == "aspaceandspaceo"
-            ) and output_edit == output_no_and:
-                print(f"output_clean: {output_clean}; target_clean: {target_clean}")
-                print(f"output: {output}; target: {target}")
-                print(f"output_no_and: {output_no_and}")
-
-            if metric == EvaluationMetric.EXACT or metric == EvaluationMetric.WORD:
-                score = float(output_clean == target_clean)
-            else:  # Evaluation.CHARACTER
-                score = float(
-                    np.mean(
-                        [
-                            float(output_clean[i] == target_clean[i])
-                            for i in range(min(len(output_clean), len(target_clean)))
-                        ]
-                        + [0.0] * abs(len(output_clean) - len(target_clean))
-                    )
-                )
-
-            if np.isclose(score, 1.0):
-                break
-
-        return score
+        # Evaluation.CHARACTER
+        return float(
+            np.mean(
+                [
+                    float(output[i] == target[i])
+                    for i in range(min(len(output), len(target)))
+                ]
+                + [0.0] * abs(len(output) - len(target))
+            )
+        )
 
     @classmethod
     def extract_letter_idx(cls, instructed_sample: str) -> int:
@@ -233,13 +218,17 @@ class LetterConcatenation(
             for e in range(s + 1, len(output) + 1):
                 current_match = output[s:e]
 
-                # Score the concatenated contiguous letters
-                current_score = self._evaluate_output_impl(
-                    current_match, target, EvaluationMetric.CHARACTER
-                )
-                if current_score > best_score:
-                    best_match = current_match
-                    best_score = current_score
+                # Attempt a variant with the substring " and " removed from the output
+                current_match_no_ands = output.lower().replace(" and ", " ")
+
+                for match in [current_match, current_match_no_ands]:
+                    # Score the concatenated contiguous letters
+                    current_score = self._evaluate_output_impl(
+                        match, target, EvaluationMetric.CHARACTER
+                    )
+                    if current_score > best_score:
+                        best_match = match
+                        best_score = current_score
 
         return best_match.lower()
 
