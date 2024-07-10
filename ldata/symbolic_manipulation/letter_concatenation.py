@@ -208,18 +208,17 @@ class LetterConcatenation(
         output_list = [
             self._ALPHANUM_PATTERN.sub("", w).lower() for w in output.split(" ")
         ]
-        output = self._config.separator.value.join(output_list)
 
         # Step 2: find the sequence that best matches the target,
         # either as a single word or as a concatenation of single-character words
         best_match = ""
         best_score = 0
-        for s in range(len(output)):
-            for e in range(s + 1, len(output) + 1):
-                current_match = output[s:e]
+        for s in range(len(output_list)):
+            for e in range(s + 1, len(output_list) + 1):
+                current_match = self._config.separator.value.join(output_list[s:e])
 
                 # Attempt a variant with the substring " and " removed from the output
-                current_match_no_ands = output.lower().replace(" and ", " ")
+                current_match_no_ands = current_match.replace(" and ", " ")
 
                 for match in [current_match, current_match_no_ands]:
                     # Score the concatenated contiguous letters
