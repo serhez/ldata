@@ -223,7 +223,7 @@ class LetterConcatenation(
         output_list = [
             self._ALPHANUM_PATTERN.sub("", w).lower() for w in output.split(" ")
         ]
-        output = self._config.separator.descriptor.join(output_list)
+        output = self._config.separator.value.join(output_list)
 
         # Step 2: find the sequence that best matches the target,
         # either as a single word or as a concatenation of single-character words
