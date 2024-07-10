@@ -166,7 +166,9 @@ class LetterConcatenation(
             output_clean = self._ALPHANUM_PATTERN.sub("", output_edit).lower()
             target_clean = self._ALPHANUM_PATTERN.sub("", target).lower()
 
-            if output.lower() == "a and o" and output_edit == output_no_and:
+            if (
+                output.lower() == "a and o" or output.lower() == "aspaceandspaceo"
+            ) and output_edit == output_no_and:
                 print(f"output_clean: {output_clean}; target_clean: {target_clean}")
                 print(f"output: {output}; target: {target}")
                 print(f"output_no_and: {output_no_and}")
