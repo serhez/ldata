@@ -160,11 +160,13 @@ class LetterConcatenation(
         _=None,
     ) -> float:
         # Attempt to remove the word "and" from the output
-        output_no_and = output.replace(" and ", " ")
+        output_no_and = output.lower().replace(" and ", " ")
 
         for output_edit in [output, output_no_and]:
             output_clean = self._ALPHANUM_PATTERN.sub("", output_edit).lower()
             target_clean = self._ALPHANUM_PATTERN.sub("", target).lower()
+
+            print(f"output_clean: {output_clean}; target_clean: {target_clean}")
 
             if metric == EvaluationMetric.EXACT or metric == EvaluationMetric.WORD:
                 score = float(output_clean == target_clean)
