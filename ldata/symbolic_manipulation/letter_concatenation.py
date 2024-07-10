@@ -219,6 +219,9 @@ class LetterConcatenation(
 
                 # Attempt a variant with the substring " and " removed from the output
                 current_match_no_ands = current_match.replace(" and ", " ")
+                print(
+                    f"current_match: {current_match}; current_match_no_ands: {current_match_no_ands}; sep: '{self._config.separator.value}'"
+                )
 
                 for match in [current_match, current_match_no_ands]:
                     # Score the concatenated contiguous letters
