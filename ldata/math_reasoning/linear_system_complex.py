@@ -246,9 +246,8 @@ class LinearSystemComplex(BuildableDataset, ComputableBenchmark):
 
         return Dataset.Split(inputs, sample.targets)
 
-    @classmethod
     def _evaluate_output_impl(
-        cls,
+        self,
         output: str,
         target: str,
         *_,
@@ -281,8 +280,7 @@ class LinearSystemComplex(BuildableDataset, ComputableBenchmark):
 
         return round(float_output, 2) == float_target
 
-    @classmethod
-    def _extract_solution_impl(cls, output: str, target: str) -> str:
+    def _extract_solution_impl(self, output: str, target: str) -> str:
         # Search for all floating point numbers in the output
         search = re.findall(r"[-+]?\d*\.\d+|\d+", output)
         if len(search) == 0:
@@ -290,7 +288,7 @@ class LinearSystemComplex(BuildableDataset, ComputableBenchmark):
 
         # Evaluate all found matches
         for match in search:
-            if cls._evaluate_output_impl(match, target) == 1.0:
+            if self._evaluate_output_impl(match, target) == 1.0:
                 return str(match)
 
         # Return the first match if no exact match was found

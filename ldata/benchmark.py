@@ -289,9 +289,8 @@ class Benchmark(ABC, Dataset):
 
         return inputs, targets, outputs, found_solutions, scores, agg_score, info
 
-    @classmethod
     def evaluate_output(
-        cls,
+        self,
         output: str,
         target: str,
         metric: EvaluationMetric,
@@ -316,12 +315,11 @@ class Benchmark(ABC, Dataset):
         - `extract_solution` is used internally to extract the solution from the output and format it into the `target` format, hence you don't need to perform this step before calling this function.
         """
 
-        found_solution = cls.extract_solution([output], [target])[0]
-        score = cls._evaluate_output_impl(found_solution, target, metric, logger)
+        found_solution = self.extract_solution([output], [target])[0]
+        score = self._evaluate_output_impl(found_solution, target, metric, logger)
 
         return score, found_solution
 
-    @classmethod
     @abstractmethod
     def _evaluate_output_impl(
         cls,
@@ -349,9 +347,8 @@ class Benchmark(ABC, Dataset):
 
         ...
 
-    @classmethod
     @overload
-    def extract_solution(cls, output: list[str], target: list[str]) -> list[str]:
+    def extract_solution(self, output: list[str], target: list[str]) -> list[str]:
         """
         Extracts the attempted solution from the outputs and formats it into the `target` format.
         If no approprate solution is found, an empty string is returned.
@@ -372,9 +369,8 @@ class Benchmark(ABC, Dataset):
 
         ...
 
-    @classmethod
     @overload
-    def extract_solution(cls, output: str, target: str) -> str:
+    def extract_solution(self, output: str, target: str) -> str:
         """
         Extracts the attempted solution from the output and formats it into the `target` format.
         If no approprate solution is found, an empty string is returned.
@@ -391,20 +387,18 @@ class Benchmark(ABC, Dataset):
 
         ...
 
-    @classmethod
-    def extract_solution(cls, output, target) -> str | list[str]:
+    def extract_solution(self, output, target) -> str | list[str]:
         if isinstance(output, str):
-            return cls._extract_solution_impl(output, target)
+            return self._extract_solution_impl(output, target)
 
         assert len(output) == len(
             target
         ), "the number of outputs and targets must be the same."
 
-        return [cls._extract_solution_impl(o, t) for o, t in zip(output, target)]
+        return [self._extract_solution_impl(o, t) for o, t in zip(output, target)]
 
-    @classmethod
     @abstractmethod
-    def _extract_solution_impl(cls, output: str, target: str) -> str:
+    def _extract_solution_impl(self, output: str, target: str) -> str:
         """
         The benchmark's internal implementation of `extract_solution`.
 

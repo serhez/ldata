@@ -152,9 +152,8 @@ class NumberListSorting(BuildableDataset, ComputableBenchmark):
 
         return Dataset.Split(inputs, sample.targets)
 
-    @classmethod
     def _evaluate_output_impl(
-        cls,
+        self,
         output: str,
         target: str,
         metric: EvaluationMetric = EvaluationMetric.CHARACTER,
@@ -196,8 +195,7 @@ class NumberListSorting(BuildableDataset, ComputableBenchmark):
                 f"Invalid evaluation method: {metric}. Must be one of {EvaluationMetric}."
             )
 
-    @classmethod
-    def _extract_solution_impl(cls, output: str, target: str) -> str:
+    def _extract_solution_impl(self, output: str, target: str) -> str:
         # Replace all separators with spaces
         for sep in [",", ";", ":", "|"]:
             output = output.replace(sep, " ")
@@ -215,7 +213,7 @@ class NumberListSorting(BuildableDataset, ComputableBenchmark):
         for s in range(len(numbers)):
             for e in range(s + 1, len(numbers) + 1):
                 current_match = numbers[s:e]
-                current_score = cls._evaluate_output_impl(
+                current_score = self._evaluate_output_impl(
                     " ".join(current_match),
                     target,
                     EvaluationMetric.CHARACTER,

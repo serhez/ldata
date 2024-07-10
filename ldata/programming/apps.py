@@ -142,9 +142,8 @@ class APPS(BuildableDataset, Benchmark):
 
         return _inner_call_method(method)
 
-    @classmethod
     def _evaluate_output_impl(
-        cls,
+        self,
         output: str,
         target: str,
         _,
@@ -183,7 +182,7 @@ class APPS(BuildableDataset, Benchmark):
 
         if which_type == APPS._CodeType.CALL_BASED:
             sol += output
-            signal.alarm(cls._TIMEOUT)
+            signal.alarm(self._TIMEOUT)
             try:
                 namespace = {}
                 exec(sol, namespace)
@@ -231,7 +230,7 @@ class APPS(BuildableDataset, Benchmark):
             tmp_test = new_test
 
             sol += tmp_test
-            signal.alarm(cls._TIMEOUT)
+            signal.alarm(self._TIMEOUT)
             try:
                 namespace = {}
                 exec(sol, namespace)
@@ -269,7 +268,7 @@ class APPS(BuildableDataset, Benchmark):
                 pass
 
             if which_type == APPS._CodeType.CALL_BASED:
-                signal.alarm(cls._TIMEOUT)
+                signal.alarm(self._TIMEOUT)
                 faulthandler.enable()
                 try:
                     result = method(*inputs)
@@ -314,7 +313,7 @@ class APPS(BuildableDataset, Benchmark):
 
             elif which_type == APPS._CodeType.STANDARD_INPUT:
                 faulthandler.enable()
-                signal.alarm(cls._TIMEOUT)
+                signal.alarm(self._TIMEOUT)
                 passed = False
 
                 if isinstance(inputs, list):
@@ -324,7 +323,7 @@ class APPS(BuildableDataset, Benchmark):
 
                 with Capturing() as _:
                     try:
-                        cls._call_method(method, inputs)
+                        self._call_method(method, inputs)
                         # reset the alarm
                         signal.alarm(0)
                         passed = True
@@ -341,7 +340,7 @@ class APPS(BuildableDataset, Benchmark):
                 if not passed:
                     continue
 
-                if cls._custom_compare(result, in_outs["outputs"][index]):
+                if self._custom_compare(result, in_outs["outputs"][index]):
                     tmp_result = True
                     results.append(float(tmp_result))
                     continue
@@ -505,8 +504,7 @@ class APPS(BuildableDataset, Benchmark):
 
         return float(np.mean(results))
 
-    @classmethod
-    def _extract_solution_impl(cls, output: str, _) -> str:
+    def _extract_solution_impl(self, output: str, _) -> str:
         solution = ""
         inside_code_block = False
         detected_code_block = False

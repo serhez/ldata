@@ -152,30 +152,37 @@ class LetterConcatenation(
 
         return Dataset.Split(inputs, sample.targets)
 
-    @classmethod
     def _evaluate_output_impl(
-        cls,
+        self,
         output: str,
         target: str,
         metric: EvaluationMetric = EvaluationMetric.CHARACTER,
         _=None,
     ) -> float:
-        output = cls._ALPHANUM_PATTERN.sub("", output).lower()
-        target = cls._ALPHANUM_PATTERN.sub("", target).lower()
+        # Attempt to remove the word "and" from the output
+        output_no_and = output.replace(" and ", " ")
 
-        if metric == EvaluationMetric.EXACT or metric == EvaluationMetric.WORD:
-            return float(output == target)
+        for output_edit in [output, output_no_and]:
+            output_clean = self._ALPHANUM_PATTERN.sub("", output_edit).lower()
+            target_clean = self._ALPHANUM_PATTERN.sub("", target).lower()
 
-        # Evaluation.CHARACTER
-        return float(
-            np.mean(
-                [
-                    float(output[i] == target[i])
-                    for i in range(min(len(output), len(target)))
-                ]
-                + [0.0] * abs(len(output) - len(target))
-            )
-        )
+            if metric == EvaluationMetric.EXACT or metric == EvaluationMetric.WORD:
+                score = float(output_clean == target_clean)
+            else:  # Evaluation.CHARACTER
+                score = float(
+                    np.mean(
+                        [
+                            float(output_clean[i] == target_clean[i])
+                            for i in range(min(len(output_clean), len(target_clean)))
+                        ]
+                        + [0.0] * abs(len(output_clean) - len(target_clean))
+                    )
+                )
+
+            if np.isclose(score, 1.0):
+                break
+
+        return score
 
     @classmethod
     def extract_letter_idx(cls, instructed_sample: str) -> int:
@@ -204,10 +211,12 @@ class LetterConcatenation(
                 "The input sample does not follow the instructed format of this benchmark."
             )
 
-    @classmethod
-    def _extract_solution_impl(cls, output: str, target: str) -> str:
+    def _extract_solution_impl(self, output: str, target: str) -> str:
         # Step 1: clean the output
-        output = cls._ALPHANUM_PATTERN.sub("", output).lower()
+        output_list = [
+            self._ALPHANUM_PATTERN.sub("", w).lower() for w in output.split(" ")
+        ]
+        output = self._config.separator.descriptor.join(output_list)
 
         # Step 2: find the sequence that best matches the target,
         # either as a single word or as a concatenation of single-character words
@@ -218,7 +227,7 @@ class LetterConcatenation(
                 current_match = output[s:e]
 
                 # Score the concatenated contiguous letters
-                current_score = cls._evaluate_output_impl(
+                current_score = self._evaluate_output_impl(
                     current_match, target, EvaluationMetric.CHARACTER
                 )
                 if current_score > best_score:

@@ -177,9 +177,8 @@ class DoubleListReversal(BuildableDataset, ComputableBenchmark):
             )
         )
 
-    @classmethod
     def _evaluate_output_impl(
-        cls,
+        self,
         output: str,
         target: str,
         metric: EvaluationMetric = EvaluationMetric.CHARACTER,
@@ -191,9 +190,9 @@ class DoubleListReversal(BuildableDataset, ComputableBenchmark):
         if metric == EvaluationMetric.EXACT:
             return float(output == target)
         elif metric == EvaluationMetric.WORD:
-            eval_fn = cls._eval_word
+            eval_fn = self._eval_word
         elif metric == EvaluationMetric.CHARACTER:
-            eval_fn = cls._eval_char
+            eval_fn = self._eval_char
         else:
             raise NotImplementedError(
                 f"Evaluation method {metric} is not implemented for this dataset."
@@ -212,10 +211,9 @@ class DoubleListReversal(BuildableDataset, ComputableBenchmark):
             )
         )
 
-    @classmethod
-    def _extract_solution_impl(cls, output: str, target: str) -> str:
+    def _extract_solution_impl(self, output: str, target: str) -> str:
         # Step 1: clean the output and split it into words
-        words = [cls._ALPHANUM_PATTERN.sub("", w) for w in output.split(" ")]
+        words = [self._ALPHANUM_PATTERN.sub("", w) for w in output.split(" ")]
         words = [w.lower() for w in words if w != ""]
 
         # Step 2: find the longest sequence of words that are in the target list
@@ -224,7 +222,7 @@ class DoubleListReversal(BuildableDataset, ComputableBenchmark):
         for s in range(len(words)):
             for e in range(s + 1, len(words) + 1):
                 current_match = words[s:e]
-                current_score = cls._evaluate_output_impl(
+                current_score = self._evaluate_output_impl(
                     " ".join(current_match),
                     target,
                     EvaluationMetric.CHARACTER,
