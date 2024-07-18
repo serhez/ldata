@@ -1,3 +1,5 @@
+"""Types of the `ldata` package."""
+
 from enum import Enum
 
 from .evaluation import EvaluationMetric

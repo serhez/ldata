@@ -165,7 +165,7 @@ class LetterConcatenation(
         if metric == EvaluationMetric.EXACT or metric == EvaluationMetric.WORD:
             return float(output == target)
 
-        # Evaluation.CHARACTER
+        # EvaluationMetric.CHARACTER
         return float(
             np.mean(
                 [

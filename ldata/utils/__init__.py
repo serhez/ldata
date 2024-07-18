@@ -1,3 +1,5 @@
+"""A set of utilities of the `ldata` package."""
+
 from .constants import DATASETS_API_URL
 from .context_managers import Capturing
 from .csv import CSV_OPTS, read_csv_columns, write_csv
