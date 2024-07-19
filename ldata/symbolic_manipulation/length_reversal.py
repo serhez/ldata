@@ -154,8 +154,8 @@ class LengthReversal(BuildableDataset, ComputableBenchmark):
 
         # EvaluationMetric.CHARACTER
         return float(
-            np.mean(
-                [
+            np.mean(  # type: ignore[reportCallIssue]
+                [  # type: ignore[reportCallIssue]
                     np.mean(
                         [
                             output_item[i] == target_item[i]
@@ -165,12 +165,13 @@ class LengthReversal(BuildableDataset, ComputableBenchmark):
                     )
                     for (output_item, target_item) in zip(output_list, target_list)
                 ]
+                + [0.0] * abs(len(output_list) - len(target_list))
             )
         )
 
     def _extract_solution_impl(self, output: str, target: str) -> str:
         # Step 1: clean the output and split it into words
-        words = [self._ALPHANUM_PATTERN.sub("", w).strip() for w in output.split(",")]
+        words = [self._ALPHANUM_PATTERN.sub("", w).lower() for w in output.split(" ")]
         words = [w.lower() for w in words if w != ""]
 
         # Step 2: find the longest sequence of words that are in the target list

@@ -10,6 +10,7 @@ from .symbolic_manipulation import (
     LetterConcatenation,
     ListReversal,
 )
+from .types import EvaluationMetric
 
 __all__ = [
     "Benchmark",
@@ -17,6 +18,7 @@ __all__ = [
     "BuildableDataset",
     "ConcatReversal",
     "DoubleListReversal",
+    "EvaluationMetric",
     "LengthReversal",
     "LetterConcatenation",
     "LinearSystemComplex",

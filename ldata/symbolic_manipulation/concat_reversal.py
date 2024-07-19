@@ -146,52 +146,31 @@ class ConcatReversal(BuildableDataset, ComputableBenchmark):
         metric: EvaluationMetric = EvaluationMetric.CHARACTER,
         _=None,
     ) -> float:
+        target = self._ALPHANUM_PATTERN.sub("", target).lower()
+
         if metric == EvaluationMetric.EXACT:
             return float(output == target)
 
-        output_list = output.split("  ")
-        target_list = target.split("  ")
-
-        if metric == EvaluationMetric.WORD:
-            return float(
-                np.mean(
-                    [
-                        output_list[i] == target_list[i]
-                        for i in range(min(len(output_list), len(target_list)))
-                    ]
-                    + [0.0] * abs(len(output_list) - len(target_list))
-                )
-            )
-
-        # EvaluationMetric.CHARACTER
+        # EvaluationMetric.CHARACTER & EvaluationMetric.WORD
         return float(
             np.mean(
-                [
-                    np.mean(
-                        [
-                            output_item[i] == target_item[i]
-                            for i in range(min(len(output_item), len(target_item)))
-                        ]
-                        + [0.0] * abs(len(output_item) - len(target_item))
-                    )
-                    for (output_item, target_item) in zip(output_list, target_list)
-                ]
+                [output[i] == target[i] for i in range(min(len(output), len(target)))]
+                + [0.0] * abs(len(output) - len(target))
             )
         )
 
     def _extract_solution_impl(self, output: str, target: str) -> str:
-        # Step 1: clean the output and split it into words
-        words = [self._ALPHANUM_PATTERN.sub("", w).strip() for w in output.split(",")]
-        words = [w.lower() for w in words if w != ""]
+        # Step 1: clean the output
+        output = self._ALPHANUM_PATTERN.sub("", output).lower()
 
         # Step 2: find the longest sequence of words that are in the target list
         best_match = []
         best_score = 0
-        for s in range(len(words)):
-            for e in range(s + 1, len(words) + 1):
-                current_match = words[s:e]
+        for s in range(len(output)):
+            for e in range(s + 1, len(output) + 1):
+                current_match = output[s:e]
                 current_score = self._evaluate_output_impl(
-                    "  ".join(current_match),
+                    "".join(current_match),
                     target,
                     EvaluationMetric.CHARACTER,
                 )
@@ -199,4 +178,4 @@ class ConcatReversal(BuildableDataset, ComputableBenchmark):
                     best_match = current_match
                     best_score = current_score
 
-        return "  ".join(best_match)
+        return "".join(best_match)
