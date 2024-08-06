@@ -18,7 +18,7 @@ class ConcatReversal(BuildableDataset, ComputableBenchmark):
     """
 
     _ALPHANUM_PATTERN = re.compile("[\W_]+")  # type: ignore[reportInvalidStringEscapeSequence]
-    _INSTRUCTIONS_TEMPLATE = "Concatenate using a {} the first and last characters of each word in the list [{}] and then reverse the order of the resulting list."
+    _INSTRUCTIONS_TEMPLATE = "Substitute each word in the list [{}] with the concatenation of its first and last characters separated by a {}. Then, reverse the order of the resulting list."
 
     @dataclass(kw_only=True)
     class Config(Benchmark.Config):
@@ -104,13 +104,13 @@ class ConcatReversal(BuildableDataset, ComputableBenchmark):
 
         if isinstance(sample, str):
             return self._INSTRUCTIONS_TEMPLATE.format(
-                self._config.separator.descriptor, ", ".join(sample.split(" "))
+                ", ".join(sample.split(" ")), self._config.separator.descriptor
             )
 
         inputs = np.array(
             [
                 self._INSTRUCTIONS_TEMPLATE.format(
-                    self._config.separator.descriptor, ", ".join(s.split(" "))
+                    ", ".join(s.split(" ")), self._config.separator.descriptor
                 )
                 for s in sample.inputs
             ]
