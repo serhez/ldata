@@ -2,7 +2,12 @@
 
 from .benchmark import Benchmark
 from .dataset import BuildableDataset, Dataset
-from .math_reasoning import LinearSystemComplex, NumberListSorting, SortedListResults
+from .math_reasoning import (
+    GSM8K,
+    LinearSystemComplex,
+    NumberListSorting,
+    SortedListResults,
+)
 from .symbolic_manipulation import (
     ConcatReversal,
     DoubleListReversal,
@@ -19,6 +24,7 @@ __all__ = [
     "ConcatReversal",
     "DoubleListReversal",
     "EvaluationMetric",
+    "GSM8K",
     "LengthReversal",
     "LetterConcatenation",
     "LinearSystemComplex",
