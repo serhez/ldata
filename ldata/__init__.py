@@ -8,6 +8,7 @@ from .math_reasoning import (
     NumberListSorting,
     SortedListResults,
 )
+from .programming import APPS
 from .qa import CityContinentCount
 from .symbolic_manipulation import (
     ConcatReversal,
@@ -19,6 +20,7 @@ from .symbolic_manipulation import (
 from .types import EvaluationMetric
 
 __all__ = [
+    "APPS",
     "Benchmark",
     "Dataset",
     "BuildableDataset",
