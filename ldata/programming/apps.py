@@ -556,8 +556,8 @@ class APPS(BuildableDataset, Benchmark):
         ), "You must set the `HF_API_TOKEN` environment variable to build the APPS benchmark. "
 
         # Load the dataset
-        splits: DatasetDict = load_dataset("codeparrot/apps", trust_remote_code=True)  # type: ignore[reportAssignmentType]
-        dataset = concatenate_datasets([split for split in splits.values()])
+        dataset: DatasetDict = load_dataset("codeparrot/apps", trust_remote_code=True)  # type: ignore[reportAssignmentType]
+        dataset = concatenate_datasets([split for split in dataset.values()])
 
         # Shuffle the dataset
         if shuffle:
