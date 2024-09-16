@@ -22,16 +22,20 @@ def get_common_names() -> list[str]:
     - The names are at least 4 characters long.
     """
 
-    response = requests.get(
-        "https://forebears.io/earth/forenames", headers={"User-Agent": "Custom"}
-    )
-    soup = BeautifulSoup(response.text, "html.parser")
+    # response = requests.get(
+    #     "https://forebears.io/earth/forenames", headers={"User-Agent": "Custom"}
+    # )
+    # soup = BeautifulSoup(response.text, "html.parser")
+    forenames_html = open("data/helpers/forenames.html", "r")
+    soup = BeautifulSoup(forenames_html, "html.parser")
     names = [a.text for a in soup.select("a[href^='forenames/']")]
 
-    response = requests.get(
-        "https://forebears.io/earth/surnames", headers={"User-Agent": "Custom"}
-    )
-    soup = BeautifulSoup(response.text, "html.parser")
+    # response = requests.get(
+    #     "https://forebears.io/earth/surnames", headers={"User-Agent": "Custom"}
+    # )
+    # soup = BeautifulSoup(response.text, "html.parser")
+    forenames_html = open("data/helpers/surnames.html", "r")
+    soup = BeautifulSoup(forenames_html, "html.parser")
     names.extend([a.text for a in soup.select("a[href^='surnames/']")])
 
     # Remove unwanted words

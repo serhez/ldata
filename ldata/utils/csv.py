@@ -55,17 +55,18 @@ def read_csv_columns(
     )
 
 
-def write_csv(file: Any, headers: list[str], data: npt.NDArray[Any]):
+def write_csv(file: Any, headers: list[str] | None, data: npt.NDArray[Any]):
     """
     Write data to a CSV file.
 
     ### Parameters
     ----------
     `file`: the file object to write to.
-    `headers`: the headers of the CSV file.
+    [optional] `headers`: the headers of the CSV file.
     `data`: the data to write.
     """
 
     writer = csv.writer(file, **CSV_OPTS)  # type: ignore[reportArgumentType]
-    writer.writerow(headers)
+    if headers:
+        writer.writerow(headers)
     writer.writerows(data)

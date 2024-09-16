@@ -1,7 +1,9 @@
+import csv
 import faulthandler
 import json
 import os
 import signal
+import sys
 from dataclasses import dataclass
 from enum import Enum
 from io import StringIO
@@ -34,8 +36,8 @@ class APPS(BuildableDataset, Benchmark):
     - You probably want to use the `APPS.build` method to cache the dataset to a file in your local filesystem and then provide the file path via `Config.data_path`. Otherwise, the dataset will be downloaded every time you instantiate this class.
     """
 
-    _TIMEOUT = 4  # seconds
-    _INSTRUCTIONS_TEMPLATE = "A programming task is given below. To solve it, you must only output the code and no other text.\n{}"
+    _TIMEOUT = 10  # seconds
+    _INSTRUCTIONS_TEMPLATE = 'A programming task is given below. To solve it, you must write Python code. If a function name is specified (e.g., "Function name: [...]"), you must define a function with that name to provide your solution. If no function name is provided, you must write code that can be executed to obtain the solution to the problem (i.e., in this case, if you write function definitions, you must also call them at the end of your code). Use four spaces for indentation, not tabs. Do not use any non-standard libraries. Here goes the original task description:\n\n{}'
 
     class Difficulty(Enum):
         """The difficulty levels of the APPS benchmark."""
@@ -70,6 +72,7 @@ class APPS(BuildableDataset, Benchmark):
         `config`: the configuration of the benchmark.
         """
 
+        csv.field_size_limit(sys.maxsize)
         super().__init__(config)
 
     def get_instructed(
@@ -172,7 +175,7 @@ class APPS(BuildableDataset, Benchmark):
         results = []
         sol = "import sys\nimport time\nimport itertools\nfrom itertools import accumulate, product, permutations, combinations\nimport collections\nfrom collections import Counter, OrderedDict, deque, defaultdict, ChainMap\nfrom functools import lru_cache\nimport math\nfrom math import sqrt, sin, cos, tan, ceil, fabs, floor, gcd, exp, log, log2\nimport fractions\nfrom typing import List, Tuple\nimport numpy as np\nimport random\nimport heapq\nfrom heapq import *\n"
 
-        in_outs = json.loads(repr(target)[2:-2])
+        in_outs = json.loads(target)
         if in_outs.get("fn_name") is None:
             which_type = APPS._CodeType.STANDARD_INPUT
             method_name = "code"
@@ -504,12 +507,16 @@ class APPS(BuildableDataset, Benchmark):
 
         return float(np.mean(results))
 
-    def _extract_solution_impl(self, output: str, _) -> str:
+    def _extract_solution_impl(self, output: str, target: str) -> str:
         solution = ""
         inside_code_block = False
         detected_code_block = False
 
-        for line in output.split("\n"):
+        output = output.strip("\n")
+        output = output.rstrip()
+
+        lines = output.split("\n")
+        for i, line in enumerate(lines):
             if line.startswith("```"):
                 inside_code_block = not inside_code_block
                 detected_code_block = True
@@ -517,7 +524,22 @@ class APPS(BuildableDataset, Benchmark):
                 solution += line + "\n"
 
         if not detected_code_block:
-            return output
+            solution = output
+
+        # So we don't remove relevant indentation in the first line
+        solution = solution.strip("\n")
+        solution = solution.rstrip()
+
+        # Tabs -> 4 spaces
+        solution = solution.replace("\t", 4 * " ")
+
+        target_dict = json.loads(target)
+        if target_dict.get("starter_code") is not None:
+            if (
+                solution[: len(target_dict["starter_code"])]
+                != target_dict["starter_code"]
+            ):
+                solution = target_dict["starter_code"] + "\n" + solution
 
         return solution
 
@@ -555,7 +577,7 @@ class APPS(BuildableDataset, Benchmark):
             "HF_API_TOKEN" in os.environ
         ), "You must set the `HF_API_TOKEN` environment variable to build the APPS benchmark. "
 
-        # Load the dataset
+        # Load the dataset in chunks
         dataset: DatasetDict = load_dataset("codeparrot/apps", trust_remote_code=True)  # type: ignore[reportAssignmentType]
         dataset = concatenate_datasets([split for split in dataset.values()])
 
@@ -569,24 +591,41 @@ class APPS(BuildableDataset, Benchmark):
             with_indices=True,
         )
 
-        # Select the first `n_samples` samples
-        dataset = dataset.select(range(n_samples))
+        # Stream the dataset
+        dataset = dataset.to_iterable_dataset()
 
-        # Get dataset columns
-        inputs = np.array([e for e in dataset["question"]])
-        targets = np.array([e for e in dataset["input_output"]])
-        solutions = np.array([e for e in dataset["solutions"]])
-
-        # Add the starting code to the inputs
-        starter_code = np.array([e for e in dataset["starter_code"]])
-        inputs = np.array(
-            [
-                inp if sc == "" else f"{inp}\n{sc}"
-                for inp, sc in zip(inputs, starter_code)
-            ]
-        )
-
-        # Write the dataset to a csv file
+        # Open the CSV file for writing
         with open(path, "w", newline="", encoding="utf-8") as file:
-            data = np.column_stack((inputs, targets, solutions))
-            write_csv(file, ["SAMPLE", "TARGET", "EXAMPLE_SOLUTION"], data)
+            # Write the header
+            write_csv(file, ["SAMPLE", "TARGET", "EXAMPLE_SOLUTION"], np.array([]))
+
+            written = 0
+
+            # Process the dataset in chunks
+            for sample in dataset:
+                if written >= n_samples:
+                    break
+
+                # Skip samples with starter code
+                # Hard to follow by LLMs and complex reasoning methods
+                if (
+                    sample.get("starter_code") is not None
+                    and sample["starter_code"] != ""
+                ):
+                    continue
+
+                input = sample["question"]
+                try:
+                    target = json.loads(sample["input_output"])
+                except Exception as e:
+                    continue
+
+                if target.get("fn_name") is not None and target["fn_name"] != "":
+                    input += f"\n\nFunction name: {target['fn_name']}"
+
+                write_csv(
+                    file,
+                    None,
+                    np.array([[input, json.dumps(target), sample["solutions"]]]),
+                )
+                written += 1

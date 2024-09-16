@@ -1,3 +1,4 @@
+import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Callable, overload
@@ -236,40 +237,32 @@ class Benchmark(ABC, Dataset):
             for i in range(len(inputs)):
                 if logger is not None:
                     logger.info(
-                        f"[Benchmark.evaluate_subject] Evaluating sample {i+1}/{len(inputs)}"
+                        f"[Benchmark.evaluate_subject] Evaluating sample {i+1+n_skip_samples}/{len(inputs)+n_skip_samples}"
                     )
                 try:
                     ind_outputs, ind_info = subject([inputs[i]])
-                    outputs.append("" if ind_outputs[0] is None else ind_outputs[0])
-                    if info is None:
-                        info = ind_info
-                    else:
-                        info += ind_info
+                    output = "" if ind_outputs[0] is None else ind_outputs[0]
 
                     score, found_solution = self.evaluate_output(
-                        outputs[i], targets[i], metric, logger
+                        output, targets[i], metric, logger
                     )
-                    scores.append(score)
-                    found_solutions.append(found_solution)
                     if logger is not None:
                         logger.info(
                             {
-                                f"[Benchmark.evaluate_subject] Evaluated sample {i+1}/{len(inputs)}": {
+                                f"[Benchmark.evaluate_subject] Evaluated sample {i+1+n_skip_samples}/{len(inputs)+n_skip_samples}": {
                                     "Input": inputs[i],
-                                    "Output": outputs[i],
+                                    "Output": output,
                                     "Target": targets[i],
                                     "Found solution": found_solution,
                                     "Score": score,
                                 }
                             }
                         )
-                except Exception as e:
+                except Exception:
                     if logger is not None:
                         logger.error(
                             {
-                                "[Benchmark.evaluate_subject] Exception raised while evaluating the subject": str(
-                                    e
-                                ),
+                                "[Benchmark.evaluate_subject] Exception raised while evaluating the subject": traceback.format_exc(),
                                 "Input": inputs[i],
                                 "Corrective action": "The stats for this sample are ignored, the output and found solution are set to an empty string and the score will be 0.0.",
                             }
@@ -279,6 +272,15 @@ class Benchmark(ABC, Dataset):
                     found_solutions.append("")
                     if info is not None:
                         info += None
+                else:
+                    scores.append(score)
+                    outputs.append(output)
+                    found_solutions.append(found_solution)
+                    if info is None:
+                        info = ind_info
+                    else:
+                        info += ind_info
+
         assert (
             len(outputs) == len(inputs)
         ), "the number of output strings returned by the subject must be the same as the number of input strings."
