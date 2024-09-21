@@ -324,7 +324,7 @@ class APPS(BuildableDataset, Benchmark):
                 if isinstance(in_outs["outputs"][index], list):
                     in_outs["outputs"][index] = "\n".join(in_outs["outputs"][index])
 
-                with Capturing() as _:
+                with Capturing() as result:
                     try:
                         self._call_method(method, inputs)
                         # reset the alarm
