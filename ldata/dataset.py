@@ -237,9 +237,7 @@ class Dataset:
         def __getitem__(self, idx: int) -> tuple[Any, Any]: ...
 
         @overload
-        def __getitem__(
-            self, idx: list[int] | npt.NDArray[np.int_] | slice
-        ) -> Dataset.Split: ...
+        def __getitem__(self, idx: Sequence[int]) -> Dataset.Split: ...
 
         def __getitem__(self, idx):
             inputs = self._inputs[idx]
@@ -262,7 +260,7 @@ class Dataset:
                     False,
                 )
 
-        def __getitems__(self, idxs: list[int]) -> Dataset.Split:
+        def __getitems__(self, idxs: Sequence[int]) -> Dataset.Split:
             if self._cache_transforms:
                 return Dataset.Split(self._inputs[idxs], self._targets[idxs])
             else:
@@ -297,7 +295,7 @@ class Dataset:
             A `Split` containing a random sample.
             """
 
-            idxs = np.random.choice(len(self), n, replace=replace)
+            idxs = np.random.choice(len(self), n, replace=replace).tolist()
             sample = self[idxs]
 
             if isinstance(sample, Dataset.Split):
@@ -389,9 +387,7 @@ class Dataset:
         def __getitem__(self, idx: int) -> tuple[Any, Any]: ...
 
         @overload
-        def __getitem__(
-            self, idx: list[int] | npt.NDArray[np.int_] | slice
-        ) -> list[tuple[Any, Any]]: ...
+        def __getitem__(self, idx: Sequence[int]) -> list[tuple[Any, Any]]: ...
 
         def __getitem__(self, idx):
             inputs = self._inputs[idx]
@@ -405,7 +401,7 @@ class Dataset:
 
             return list(zip(inputs, targets))
 
-        def __getitems__(self, idxs: list[int]) -> list[tuple[Any, Any]]:
+        def __getitems__(self, idxs: Sequence[int]) -> list[tuple[Any, Any]]:
             inputs = self._inputs[idxs]
             targets = self._targets[idxs]
             if not self._cache_transforms:
@@ -500,7 +496,7 @@ class Dataset:
     def train_set(self) -> Split:
         """The training set."""
 
-        train_set = self.full_set[self._train_idxs]
+        train_set = self.full_set[self._train_idxs.tolist()]
 
         if isinstance(train_set, Dataset.Split):
             return train_set
@@ -513,7 +509,7 @@ class Dataset:
     def test_set(self) -> Split:
         """The test set."""
 
-        test_set = self.full_set[self._test_idxs]
+        test_set = self.full_set[self._test_idxs.tolist()]
 
         if isinstance(test_set, Dataset.Split):
             return test_set
@@ -526,7 +522,7 @@ class Dataset:
     def shots(self) -> Split:
         """The shots used for in-context learning."""
 
-        shots = self.full_set[self._shots_idxs]
+        shots = self.full_set[self._shots_idxs.tolist()]
 
         if isinstance(shots, Dataset.Split):
             return shots
