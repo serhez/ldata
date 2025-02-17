@@ -6,20 +6,20 @@ import urllib.request
 from abc import abstractmethod
 from dataclasses import dataclass
 from os import path
-from typing import Any, Iterator, Sequence, Type, overload
+from typing import Any, Callable, Iterator, Sequence, Type, overload
 
 import numpy as np
 import numpy.typing as npt
 import requests
 from datasets import DatasetDict, concatenate_datasets, load_dataset
-from torch.utils.data import Dataset as TorchDataset
+from torch.utils.data import IterableDataset as TorchIterableDataset
 
 from ldata.utils import DATASETS_API_URL, read_csv_columns
 
 
 # TODO: Implement chaching the dataset into a file if coming from a remote server
 # TODO: Implement paging to avoid loading the entire dataset into memory
-class Dataset(TorchDataset):
+class Dataset:
     """A dataset which can be split into training and test sets."""
 
     @dataclass(kw_only=True)
@@ -69,13 +69,16 @@ class Dataset(TorchDataset):
         return cls.Config
 
     class Split:
-        """A split of the dataset, which contains input and target data."""
+        """A split of the dataset containing input and target data."""
 
         @overload
         def __init__(
             self,
             inputs: Sequence[Any] | npt.NDArray[Any],
             targets: Sequence[Any] | npt.NDArray[Any],
+            transform: Callable[[npt.NDArray], npt.NDArray] = lambda x: x,
+            target_transform: Callable[[npt.NDArray], npt.NDArray] = lambda x: x,
+            cache_transforms: bool = True,
         ):
             """
             Initialize the dataset split.
@@ -84,6 +87,10 @@ class Dataset(TorchDataset):
             ----------
             `inputs`: the input data.
             `targets`: the target data.
+            `transform`: a transformation to apply to the input data.
+            `target_transform`: a transformation to apply to the target data.
+            `cache_transforms`: whether to cache the transformed data.
+            - Note that caching the transformed data results in the loss of the original data, thus using the `raw_*` properties will raise an error.
 
             ### Raises
             ----------
@@ -96,6 +103,9 @@ class Dataset(TorchDataset):
         def __init__(
             self,
             data: Sequence[tuple[Any, Any]],
+            transform: Callable[[npt.NDArray], npt.NDArray] = lambda x: x,
+            target_transform: Callable[[npt.NDArray], npt.NDArray] = lambda x: x,
+            cache_transforms: bool = True,
         ):
             """
             Initialize the dataset split.
@@ -103,6 +113,10 @@ class Dataset(TorchDataset):
             ### Parameters
             ----------
             `data`: the (input, target) data pairs.
+            `transform`: a transformation to apply to the input data.
+            `target_transform`: a transformation to apply to the target data.
+            `cache_transforms`: whether to cache the transformed data.
+            - Note that caching the transformed data results in the loss of the original data, thus using the `raw_*` properties will raise an error.
 
             ### Raises
             ----------
@@ -112,39 +126,107 @@ class Dataset(TorchDataset):
             ...
 
         def __init__(self, *args, **_):
-            if len(args) == 1:
+            if len(args) == 4:
                 data = args[0]
                 inputs, targets = zip(*data)
+                self._transform = args[1]
+                self._target_transform = args[2]
+                self._cache_transforms = args[3]
             else:
                 inputs, targets = args
+                self._transform = args[2]
+                self._target_transform = args[3]
+                self._cache_transforms = args[4]
 
             if isinstance(inputs, list):
                 inputs = np.array(inputs)
             if isinstance(targets, list):
                 targets = np.array(targets)
 
-            assert len(inputs) == len(
-                targets
-            ), "inputs and targets lists must have the same length."
+            assert len(inputs) == len(targets), (
+                "inputs and targets lists must have the same length."
+            )
 
-            self._inputs = inputs
-            self._targets = targets
+            if self._cache_transforms:
+                self._inputs = self._transform(inputs)
+                self._targets = self._target_transform(targets)
+            else:
+                self._inputs = inputs
+                self._targets = targets
 
         @property
         def inputs(self) -> npt.NDArray[Any]:
-            """The input data."""
+            """The transformed input data."""
+
+            if self._cache_transforms:
+                return self._inputs
+            else:
+                return self._transform(self._inputs)
+
+        @property
+        def raw_inputs(self) -> npt.NDArray[Any]:
+            """
+            The untransformed input data.
+
+            ### Raises
+            ----------
+            `AttributeError`: if the transformed data has been cached (i.e., the raw data is not available).
+            """
+
+            if self._cache_transforms:
+                raise AttributeError(
+                    "The raw data is not available as the transformed data has been cached."
+                )
 
             return self._inputs
 
         @property
         def targets(self) -> npt.NDArray[Any]:
-            """The target data."""
+            """The transformed target data."""
+
+            if self._cache_transforms:
+                return self._targets
+            else:
+                return self._target_transform(self._targets)
+
+        @property
+        def raw_targets(self) -> npt.NDArray[Any]:
+            """
+            The untransformed target data.
+
+            ### Raises
+            ----------
+            `AttributeError`: if the transformed data has been cached (i.e., the raw data is not available).
+            """
+
+            if self._cache_transforms:
+                raise AttributeError(
+                    "The raw data is not available as the transformed data has been cached."
+                )
 
             return self._targets
 
         @property
-        def raw(self) -> list[tuple[Any, Any]]:
-            """The raw (input, target) data pairs."""
+        def primitives(self) -> list[tuple[Any, Any]]:
+            """The (transformed input, transformed target) data pairs."""
+
+            if self._cache_transforms:
+                inputs = self._inputs
+                targets = self._targets
+            else:
+                inputs = self._transform(self._inputs)
+                targets = self._target_transform(self._targets)
+
+            return list(zip(self._transform(inputs), self._target_transform(targets)))
+
+        @property
+        def raw_primitives(self) -> list[tuple[Any, Any]]:
+            """The (input, target) data pairs."""
+
+            if self._cache_transforms:
+                raise AttributeError(
+                    "The raw data is not available as the transformed data has been cached."
+                )
 
             return list(zip(self._inputs, self._targets))
 
@@ -160,12 +242,46 @@ class Dataset(TorchDataset):
         ) -> Dataset.Split: ...
 
         def __getitem__(self, idx):
+            inputs = self._inputs[idx]
+            targets = self._targets[idx]
+            if not self._cache_transforms:
+                inputs = self._transform(inputs)
+                targets = self._target_transform(targets)
+
             if isinstance(idx, int):
-                return (self._inputs[idx], self._targets[idx])
-            return Dataset.Split(self._inputs[idx], self._targets[idx])
+                return (inputs, targets)
+
+            if self._cache_transforms:
+                return Dataset.Split(self._inputs[idx], self._targets[idx])
+            else:
+                return Dataset.Split(
+                    self._inputs[idx],
+                    self._targets[idx],
+                    self._transform,
+                    self._target_transform,
+                    False,
+                )
+
+        def __getitems__(self, idxs: list[int]) -> Dataset.Split:
+            if self._cache_transforms:
+                return Dataset.Split(self._inputs[idxs], self._targets[idxs])
+            else:
+                return Dataset.Split(
+                    self._inputs[idxs],
+                    self._targets[idxs],
+                    self._transform,
+                    self._target_transform,
+                    False,
+                )
 
         def __iter__(self) -> Iterator[tuple[Any, Any]]:
-            return iter(zip(self._inputs, self._targets))
+            inputs = self._inputs
+            targets = self._targets
+            if not self._cache_transforms:
+                inputs = self._transform(inputs)
+                targets = self._target_transform(targets)
+
+            return iter(zip(inputs, targets))
 
         def sample(self, n: int = 1, replace: bool = False) -> Dataset.Split:
             """
@@ -189,13 +305,121 @@ class Dataset(TorchDataset):
 
             return Dataset.Split(np.array([sample[0]]), np.array([sample[1]]))
 
+        def to_pytorch(self) -> Dataset.PyTorchSplit:
+            """
+            Convert the split to a PyTorch-compatible split.
+            This conversion should be memory-efficient as inputs and targets are copied by reference.
+            """
+
+            if self._cache_transforms:
+                return Dataset.PyTorchSplit(self._inputs, self._targets)
+            else:
+                return Dataset.PyTorchSplit(
+                    self._inputs,
+                    self._targets,
+                    self._transform,
+                    self._target_transform,
+                    False,
+                )
+
+    class PyTorchSplit(Split, TorchIterableDataset):
+        """
+        A PyTorch-compatible split of the dataset containing input and target data.
+        The key difference w.r.t. `Split` is that the __getitem__ methods return the raw data, instead of a `Split` object.
+        """
+
+        @overload
+        def __init__(
+            self,
+            inputs: Sequence[Any] | npt.NDArray[Any],
+            targets: Sequence[Any] | npt.NDArray[Any],
+            transform: Callable[[npt.NDArray], npt.NDArray] = lambda x: x,
+            target_transform: Callable[[npt.NDArray], npt.NDArray] = lambda x: x,
+            cache_transforms: bool = True,
+        ):
+            """
+            Initialize the dataset split.
+
+            ### Parameters
+            ----------
+            `inputs`: the input data.
+            `targets`: the target data.
+            `transform`: a transformation to apply to the input data.
+            `target_transform`: a transformation to apply to the target data.
+            `cache_transforms`: whether to cache the transformed data.
+            - Note that caching the transformed data results in the loss of the original data, thus using the `raw_*` properties will raise an error.
+
+            ### Raises
+            ----------
+            `AssertionError`: if the inputs and targets lists have different lengths.
+            """
+
+            ...
+
+        @overload
+        def __init__(
+            self,
+            data: Sequence[tuple[Any, Any]],
+            transform: Callable[[npt.NDArray], npt.NDArray] = lambda x: x,
+            target_transform: Callable[[npt.NDArray], npt.NDArray] = lambda x: x,
+            cache_transforms: bool = True,
+        ):
+            """
+            Initialize the dataset split.
+
+            ### Parameters
+            ----------
+            `data`: the (input, target) data pairs.
+            `transform`: a transformation to apply to the input data.
+            `target_transform`: a transformation to apply to the target data.
+            `cache_transforms`: whether to cache the transformed data.
+            - Note that caching the transformed data results in the loss of the original data, thus using the `raw_*` properties will raise an error.
+
+            ### Raises
+            ----------
+            `AssertionError`: if the inputs and targets lists have different lengths.
+            """
+
+            ...
+
+        def __init__(self, *args, **_):
+            super(Dataset.PyTorchSplit, self).__init__(*args)
+
+        @overload
+        def __getitem__(self, idx: int) -> tuple[Any, Any]: ...
+
+        @overload
+        def __getitem__(
+            self, idx: list[int] | npt.NDArray[np.int_] | slice
+        ) -> list[tuple[Any, Any]]: ...
+
+        def __getitem__(self, idx):
+            inputs = self._inputs[idx]
+            targets = self._targets[idx]
+            if not self._cache_transforms:
+                inputs = self._transform(inputs)
+                targets = self._target_transform(targets)
+
+            if isinstance(idx, int):
+                return (inputs, targets)
+
+            return list(zip(inputs, targets))
+
+        def __getitems__(self, idxs: list[int]) -> list[tuple[Any, Any]]:
+            inputs = self._inputs[idxs]
+            targets = self._targets[idxs]
+            if not self._cache_transforms:
+                inputs = self._transform(inputs)
+                targets = self._target_transform(targets)
+
+            return list(zip(inputs, targets))
+
     def __init__(
         self,
         config: Config,
         input_dtype: Type[Any] = str,
         target_dtype: Type[Any] = str,
-        transform: Any = None,
-        target_transform: Any = None,
+        transform: Callable[[npt.NDArray[Any]], npt.NDArray[Any]] = lambda x: x,
     ):
         """
         Initialize the dataset.
@@ -205,8 +429,7 @@ class Dataset(TorchDataset):
         `config`: the configuration for the dataset.
         `input_dtype`: the data type of the input data.
         `target_dtype`: the data type of the target data.
-        `transform`: the PyTorch transform to apply to the input data.
-        `target_transform`: the PyTorch transform to apply to the target data.
+        `transform`: the transformation to apply to the input data.
 
         ### Raises
         ----------
@@ -220,7 +443,6 @@ class Dataset(TorchDataset):
         self._input_dtype = input_dtype
         self._target_dtype = target_dtype
         self._transform = transform
-        self._target_transform = target_transform
 
         self.set_seed(config.seed)
 
@@ -260,12 +482,6 @@ class Dataset(TorchDataset):
         return self._transform
 
     @property
-    def target_transform(self) -> Any:
-        """The transform to apply to the target data."""
-
-        return self._target_transform
-
-    @property
     def full_set(self) -> Split:
         """The full dataset."""
 
@@ -278,7 +494,7 @@ class Dataset(TorchDataset):
             [self._config.inputs_column, self._config.targets_column],
         )
 
-        return self.Split(inputs, targets)
+        return self.Split(inputs, targets, self._transform)
 
     @property
     def train_set(self) -> Split:
@@ -289,7 +505,9 @@ class Dataset(TorchDataset):
         if isinstance(train_set, Dataset.Split):
             return train_set
 
-        return Dataset.Split(np.array([train_set[0]]), np.array([train_set[1]]))
+        return Dataset.Split(
+            np.array([train_set[0]]), np.array([train_set[1]]), self._transform
+        )
 
     @property
     def test_set(self) -> Split:
@@ -300,7 +518,9 @@ class Dataset(TorchDataset):
         if isinstance(test_set, Dataset.Split):
             return test_set
 
-        return Dataset.Split(np.array([test_set[0]]), np.array([test_set[1]]))
+        return Dataset.Split(
+            np.array([test_set[0]]), np.array([test_set[1]]), self._transform
+        )
 
     @property
     def shots(self) -> Split:
@@ -311,7 +531,9 @@ class Dataset(TorchDataset):
         if isinstance(shots, Dataset.Split):
             return shots
 
-        return Dataset.Split(np.array([shots[0]]), np.array([shots[1]]))
+        return Dataset.Split(
+            np.array([shots[0]]), np.array([shots[1]]), self._transform
+        )
 
     @property
     def train_len(self) -> int:
