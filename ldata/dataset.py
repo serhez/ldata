@@ -71,7 +71,6 @@ class Dataset:
     class Split:
         """A split of the dataset containing input and target data."""
 
-        @overload
         def __init__(
             self,
             inputs: Sequence[Any] | npt.NDArray[Any],
@@ -97,46 +96,9 @@ class Dataset:
             `AssertionError`: if the inputs and targets lists have different lengths.
             """
 
-            ...
-
-        @overload
-        def __init__(
-            self,
-            data: Sequence[tuple[Any, Any]],
-            transform: Callable[[npt.NDArray], npt.NDArray] = lambda x: x,
-            target_transform: Callable[[npt.NDArray], npt.NDArray] = lambda x: x,
-            cache_transforms: bool = True,
-        ):
-            """
-            Initialize the dataset split.
-
-            ### Parameters
-            ----------
-            `data`: the (input, target) data pairs.
-            `transform`: a transformation to apply to the input data.
-            `target_transform`: a transformation to apply to the target data.
-            `cache_transforms`: whether to cache the transformed data.
-            - Note that caching the transformed data results in the loss of the original data, thus using the `raw_*` properties will raise an error.
-
-            ### Raises
-            ----------
-            `AssertionError`: if the inputs and targets lists have different lengths.
-            """
-
-            ...
-
-        def __init__(self, *args, **_):
-            if len(args) == 4:
-                data = args[0]
-                inputs, targets = zip(*data)
-                self._transform = args[1]
-                self._target_transform = args[2]
-                self._cache_transforms = args[3]
-            else:
-                inputs, targets = args
-                self._transform = args[2]
-                self._target_transform = args[3]
-                self._cache_transforms = args[4]
+            self._transform = transform
+            self._target_transform = target_transform
+            self._cache_transforms = cache_transforms
 
             if isinstance(inputs, list):
                 inputs = np.array(inputs)
